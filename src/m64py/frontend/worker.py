@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Author: Milan Nikolic <gen2brain@gmail.com>
+# Contributor: Shawn Wilson of Alpha Griffin <shawn@lannocc.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -340,6 +341,13 @@ class Worker(QThread):
         elif self.state == M64EMU_RUNNING:
             (load, pause, action, cheats) = True, True, True, cheat
         self.parent.state_changed.emit((load, pause, action, cheats))
+        
+    def toggle_autoshots(self):
+        """Toggles auto-screenshot function."""
+        if self.core_state_query(M64CORE_VIDEO_AUTOSHOTS):
+            self.core_state_set(M64CORE_VIDEO_AUTOSHOTS, 0)
+        else:
+            self.core_state_set(M64CORE_VIDEO_AUTOSHOTS, 1)
 
     def stop(self):
         """Stops thread."""
