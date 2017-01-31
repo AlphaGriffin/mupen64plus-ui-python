@@ -35,6 +35,7 @@ from m64py.frontend.glwidget import GLWidget
 from m64py.ui.mainwindow_ui import Ui_MainWindow
 from m64py.frontend.recentfiles import RecentFiles
 
+from m64py.frontend.plotter import Plotter as plotter
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -62,8 +63,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar_label.setIndent(2)
         self.statusbar_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self.statusbar.addPermanentWidget(self.statusbar_label, 1)
-        self.update_status(self.tr(
-            "Welcome to M64Py version %s." % FRONTEND_VERSION))
+        self.update_status(self.tr("Welcome to M64Py version %s." % FRONTEND_VERSION))
 
         self.sizes = {
             SIZE_1X: self.action1X,
@@ -484,6 +484,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_actionLog_triggered(self):
         """Shows log dialog."""
         logview.show()
+    
+    @pyqtSlot()
+    def on_actionPad_Graph_triggered(self):
+        """Shows log dialog."""
+        plotter.show()
 
 
 class View(QGraphicsView):

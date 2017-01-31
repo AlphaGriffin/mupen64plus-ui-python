@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>320</width>
-    <height>289</height>
+    <width>594</width>
+    <height>364</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -37,7 +37,16 @@
     <property name="sizeConstraint">
      <enum>QLayout::SetFixedSize</enum>
     </property>
-    <property name="margin">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
      <number>0</number>
     </property>
    </layout>
@@ -47,8 +56,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>320</width>
-     <height>24</height>
+     <width>594</width>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -69,7 +78,7 @@
     </widget>
     <widget class="QMenu" name="menuStateSlot">
      <property name="title">
-      <string>Change State Slot</string>
+      <string>&amp;Change State Slot</string>
      </property>
     </widget>
     <addaction name="menuLoad"/>
@@ -110,6 +119,8 @@
     <addaction name="actionAbout"/>
     <addaction name="actionLicense"/>
     <addaction name="actionLog"/>
+    <addaction name="separator"/>
+    <addaction name="action_Pad_Graph"/>
    </widget>
    <widget class="QMenu" name="menuEmulation">
     <property name="title">
@@ -136,7 +147,7 @@
     </property>
     <widget class="QMenu" name="menuWindowSize">
      <property name="title">
-      <string>Window Size</string>
+      <string>&amp;Window Size</string>
      </property>
      <addaction name="action1X"/>
      <addaction name="action2X"/>
@@ -146,11 +157,18 @@
     <addaction name="separator"/>
     <addaction name="actionFullscreen"/>
    </widget>
+   <widget class="QMenu" name="menuAlphagriffin">
+    <property name="title">
+     <string>&amp;Other</string>
+    </property>
+    <addaction name="actionPad_Graph"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEmulation"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuAlphagriffin"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="styleSheet">
@@ -204,7 +222,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_paths.png</normaloff>:/icons/action_paths.png</iconset>
    </property>
    <property name="text">
-    <string>Paths</string>
+    <string>&amp;Paths</string>
    </property>
   </action>
   <action name="actionGraphic">
@@ -218,7 +236,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_emulator.png</normaloff>:/icons/action_emulator.png</iconset>
    </property>
    <property name="text">
-    <string>Emulator</string>
+    <string>&amp;Emulator</string>
    </property>
   </action>
   <action name="actionPlugins">
@@ -227,7 +245,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_plugins.png</normaloff>:/icons/action_plugins.png</iconset>
    </property>
    <property name="text">
-    <string>Plugins</string>
+    <string>P&amp;lugins</string>
    </property>
   </action>
   <action name="actionLicense">
@@ -236,7 +254,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_license.png</normaloff>:/icons/action_license.png</iconset>
    </property>
    <property name="text">
-    <string>License</string>
+    <string>L&amp;icense</string>
    </property>
   </action>
   <action name="actionLoadState">
@@ -248,7 +266,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_state_load.png</normaloff>:/icons/action_state_load.png</iconset>
    </property>
    <property name="text">
-    <string>Load State</string>
+    <string>&amp;Load State</string>
    </property>
    <property name="shortcut">
     <string>F7</string>
@@ -263,7 +281,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_state_save.png</normaloff>:/icons/action_state_save.png</iconset>
    </property>
    <property name="text">
-    <string>Save State</string>
+    <string>Sa&amp;ve State</string>
    </property>
    <property name="shortcut">
     <string>F5</string>
@@ -422,7 +440,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_rom_info.png</normaloff>:/icons/action_rom_info.png</iconset>
    </property>
    <property name="text">
-    <string>Show ROM Info...</string>
+    <string>Show ROM &amp;Info...</string>
    </property>
   </action>
   <action name="action1X">
@@ -458,7 +476,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_fullscreen.png</normaloff>:/icons/action_fullscreen.png</iconset>
    </property>
    <property name="text">
-    <string>Fullscreen</string>
+    <string>&amp;Fullscreen</string>
    </property>
    <property name="shortcut">
     <string>Alt+Return</string>
@@ -530,7 +548,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_speed_down.png</normaloff>:/icons/action_speed_down.png</iconset>
    </property>
    <property name="text">
-    <string>Slow Down</string>
+    <string>Slow &amp;Down</string>
    </property>
    <property name="shortcut">
     <string>F10</string>
@@ -545,7 +563,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_speed_up.png</normaloff>:/icons/action_speed_up.png</iconset>
    </property>
    <property name="text">
-    <string>Speed Up</string>
+    <string>Speed &amp;Up</string>
    </property>
    <property name="shortcut">
     <string>F11</string>
@@ -565,7 +583,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_cheats.png</normaloff>:/icons/action_cheats.png</iconset>
    </property>
    <property name="text">
-    <string>Cheats...</string>
+    <string>&amp;Cheats...</string>
    </property>
    <property name="shortcut">
     <string>F2</string>
@@ -581,7 +599,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_state_load.png</normaloff>:/icons/action_state_load.png</iconset>
    </property>
    <property name="text">
-    <string>Load State...</string>
+    <string>Loa&amp;d State...</string>
    </property>
   </action>
   <action name="actionSaveAs">
@@ -593,7 +611,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_state_save.png</normaloff>:/icons/action_state_save.png</iconset>
    </property>
    <property name="text">
-    <string>Save State As...</string>
+    <string>Sav&amp;e State As...</string>
    </property>
   </action>
   <action name="actionLimitFPS">
@@ -607,7 +625,7 @@ QStatusBar { margin:0px; }</string>
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Limit FPS</string>
+    <string>&amp;Limit FPS</string>
    </property>
   </action>
   <action name="actionSoftReset">
@@ -631,7 +649,7 @@ QStatusBar { margin:0px; }</string>
      <normaloff>:/icons/action_graphics.png</normaloff>:/icons/action_graphics.png</iconset>
    </property>
    <property name="text">
-    <string>Graphics</string>
+    <string>&amp;Graphics</string>
    </property>
   </action>
   <action name="actionLog">
@@ -641,6 +659,16 @@ QStatusBar { margin:0px; }</string>
    </property>
    <property name="text">
     <string>&amp;Log Viewer</string>
+   </property>
+  </action>
+  <action name="actionPad_Graph">
+   <property name="text">
+    <string>Pad Graph</string>
+   </property>
+  </action>
+  <action name="action_Pad_Graph">
+   <property name="text">
+    <string>&amp;Pad Graph</string>
    </property>
   </action>
  </widget>
