@@ -288,6 +288,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionSaveScreenshot.setEnabled(action)
         self.actionShowROMInfo.setEnabled(action)
         self.actionMute.setEnabled(action)
+        self.actionAutoShots.setEnabled(action)
         self.actionStop.setEnabled(action)
         self.actionReset.setEnabled(action)
         self.actionSoftReset.setEnabled(action)
@@ -316,6 +317,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.glwidget.toggle_fs.emit()
         self.stack.setCurrentWidget(self.view)
         self.actionMute.setChecked(False)
+        self.actionAutoShots.setChecked(False)
         self.actionPause.setChecked(False)
         self.actionLimitFPS.setChecked(True)
         self.on_set_caption("M64Py")
@@ -401,6 +403,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_actionMute_triggered(self):
         """Toggles mute."""
         self.worker.toggle_mute()
+
+    @pyqtSlot()
+    def on_actionAutoShots_triggered(self):
+        """Toggles auto-shots."""
+        self.worker.toggle_autoshots()
 
     @pyqtSlot()
     def on_actionStop_triggered(self):
