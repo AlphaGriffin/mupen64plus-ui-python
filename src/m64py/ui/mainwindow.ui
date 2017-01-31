@@ -120,7 +120,6 @@
     <addaction name="actionLicense"/>
     <addaction name="actionLog"/>
     <addaction name="separator"/>
-    <addaction name="action_Pad_Graph"/>
    </widget>
    <widget class="QMenu" name="menuEmulation">
     <property name="title">
@@ -663,7 +662,7 @@ QStatusBar { margin:0px; }</string>
   </action>
   <action name="actionPad_Graph">
    <property name="text">
-    <string>Pad Graph</string>
+    <string>&amp;Pad Graph</string>
    </property>
   </action>
   <action name="action_Pad_Graph">
