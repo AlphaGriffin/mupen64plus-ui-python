@@ -35,7 +35,7 @@ from m64py.frontend.glwidget import GLWidget
 from m64py.ui.mainwindow_ui import Ui_MainWindow
 from m64py.frontend.recentfiles import RecentFiles
 
-from m64py.frontend.plotter import Plotter as plotter
+from m64py.frontend.plotter import plotter
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -58,6 +58,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         logview.setParent(self)
         logview.setWindowFlags(Qt.Dialog)
+
+        plotter.setParent(self)
+        plotter.setWindowFlags(Qt.Dialog)
 
         self.statusbar_label = QLabel()
         self.statusbar_label.setIndent(2)

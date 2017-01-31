@@ -120,6 +120,7 @@
     <addaction name="actionLicense"/>
     <addaction name="actionLog"/>
     <addaction name="separator"/>
+    <addaction name="actionPad_Graph"/>
    </widget>
    <widget class="QMenu" name="menuEmulation">
     <property name="title">
@@ -156,18 +157,11 @@
     <addaction name="separator"/>
     <addaction name="actionFullscreen"/>
    </widget>
-   <widget class="QMenu" name="menuAlphagriffin">
-    <property name="title">
-     <string>&amp;Other</string>
-    </property>
-    <addaction name="actionPad_Graph"/>
-   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEmulation"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuAlphagriffin"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="styleSheet">
@@ -661,11 +655,6 @@ QStatusBar { margin:0px; }</string>
    </property>
   </action>
   <action name="actionPad_Graph">
-   <property name="text">
-    <string>&amp;Pad Graph</string>
-   </property>
-  </action>
-  <action name="action_Pad_Graph">
    <property name="text">
     <string>&amp;Pad Graph</string>
    </property>
