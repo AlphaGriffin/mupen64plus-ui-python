@@ -36,6 +36,7 @@ from m64py.ui.mainwindow_ui import Ui_MainWindow
 from m64py.frontend.recentfiles import RecentFiles
 
 from m64py.frontend.plotter import plotter
+from m64py.frontend.recorder import recorder
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -61,6 +62,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         plotter.setParent(self)
         plotter.setWindowFlags(Qt.Dialog)
+
+        
 
         self.statusbar_label = QLabel()
         self.statusbar_label.setIndent(2)
@@ -91,6 +94,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.recent_files = RecentFiles(self)
         self.connect_signals()
         self.worker.init()
+        
+        recorder.setParent(self)
+        recorder.setWindowFlags(Qt.Dialog)
+        recorder.setWorker(self.worker)
 
     def closeEvent(self, event):
         self.worker.quit()
@@ -490,8 +497,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     @pyqtSlot()
     def on_actionPad_Graph_triggered(self):
-        """Shows log dialog."""
+        """Shows plotter dialog."""
         plotter.show()
+    
+    @pyqtSlot()
+    def on_actionRecording_Console_triggered(self):
+        """Shows recorder dialog."""
+        recorder.show()
 
 
 class View(QGraphicsView):

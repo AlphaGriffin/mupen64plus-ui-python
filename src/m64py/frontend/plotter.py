@@ -61,14 +61,15 @@ class xpad(object):
 
 class paddle_graph(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, layout=None, width=5, height=4, dpi=100):
         self.plotMem = 50                                # how much data to keep on the plot
         self.plotData = [[0] * (5)] * self.plotMem       # mem storage for plot
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
-        FigureCanvas.updateGeometry(self)
+        layout.addWidget(self)
+        #FigureCanvas.updateGeometry(self)
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
         timer.start(100)
@@ -94,6 +95,6 @@ class Plotter(QDialog, Ui_Plotter):
         QDialog.__init__(self, parent)
         self.setupUi(self)
         self.graph_widget
-        self.test_graph = paddle_graph(self.graph_widget, width=6, height=4, dpi=125)
+        self.test_graph = paddle_graph(self.graph_widget, self.graph_layout, width=6, height=4, dpi=125)
 
 plotter = Plotter()
