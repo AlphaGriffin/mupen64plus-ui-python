@@ -4,5 +4,6 @@
     <file>images/default.png</file>
     <file>images/front.png</file>
     <file>images/logo.png</file>
+    <file>images/aglogo.jpg</file>
   </qresource>
 </RCC>
