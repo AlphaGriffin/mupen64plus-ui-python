@@ -4,8 +4,8 @@
  <widget class="QDialog" name="AGAbout">
   <property name="geometry">
    <rect>
-    <x>42</x>
-    <y>42</y>
+    <x>0</x>
+    <y>0</y>
     <width>640</width>
     <height>480</height>
    </rect>
@@ -33,13 +33,92 @@
   </property>
   <layout class="QVBoxLayout" name="mainLayout" stretch="1,0">
    <item>
-    <widget class="QTextEdit" name="content">
-     <property name="readOnly">
-      <bool>true</bool>
+    <widget class="QWidget" name="content" native="true">
+     <property name="styleSheet">
+      <string notr="true">background-color: white</string>
      </property>
-     <property name="placeholderText">
-      <string>Thank you for using the Alpha Griffin Edition.\n\nhttp://alphagriffin.com</string>
-     </property>
+     <widget class="QLabel" name="logo">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>30</y>
+        <width>271</width>
+        <height>361</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="pixmap">
+       <pixmap resource="images.qrc">:/images/aglogo.jpg</pixmap>
+      </property>
+     </widget>
+     <widget class="QLabel" name="title">
+      <property name="geometry">
+       <rect>
+        <x>330</x>
+        <y>80</y>
+        <width>251</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Alpha Griffin Edition</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="website">
+      <property name="geometry">
+       <rect>
+        <x>310</x>
+        <y>280</y>
+        <width>201</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Visit AlphaGriffin.com</string>
+      </property>
+     </widget>
+     <widget class="QWidget" name="">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>160</y>
+        <width>132</width>
+        <height>44</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="nameLayout">
+       <item>
+        <widget class="QLabel" name="erock">
+         <property name="text">
+          <string>Eric Petersen</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="saw">
+         <property name="text">
+          <string>Shawn A. Wilson</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <zorder>logo</zorder>
+     <zorder>title</zorder>
+     <zorder>erock</zorder>
+     <zorder>saw</zorder>
+     <zorder>website</zorder>
+     <zorder>erock</zorder>
+     <zorder>erock</zorder>
     </widget>
    </item>
    <item>
@@ -81,7 +160,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="images.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>closeButton</sender>
