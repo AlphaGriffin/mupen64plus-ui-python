@@ -37,6 +37,7 @@ from m64py.frontend.recentfiles import RecentFiles
 import m64py.core as core
 from m64py.frontend.plotter import plotter
 from m64py.frontend.recorder import recorder
+from m64py.frontend.agabout import agabout
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
