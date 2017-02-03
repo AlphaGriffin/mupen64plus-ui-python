@@ -2,3 +2,5 @@
 /src/m64py/ui/*.py
 
 /build
+
+m64py.py

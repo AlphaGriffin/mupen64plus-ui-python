@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
+from m64py.core.defs import *
 from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import pyqtSlot, QTimer
 import time
@@ -34,7 +35,7 @@ You are running: {0:2}\n
 Step 1: Start a Game and Pause it.\n
 Step 2: Press the Check Button and Get the Game Creds\n
 Step 3: Choose New Game and Press record\n
-step 4: Play just 1 round of your game, pause it, then come back and stop your recording.\n
+step 4: Play just 1 round of your game, pause it, then come back and stop your recording.\n\n\n\n
 Start here
  |
  |
@@ -50,27 +51,15 @@ class xpad(object):
             self.joystick.init()
         except:
             print('unable to connect to Xbox Controller')
-            
     def read(self):
         pygame.event.pump()
-        
-        # left stick
         L_x_axis = self.joystick.get_axis(0)
         L_y_axis = self.joystick.get_axis(1)
-        # right stick
-        #R_x_axis = self.joystick.get_axis(2)
-        #R_y_axis = self.joystick.get_axis(3)
-        # face buttons
-        #x_btn = self.joystick.get_button(0)
         a_btn = self.joystick.get_button(1)
         b_btn = self.joystick.get_button(2)
-        #y_btn = self.joystick.get_button(3)
         # top buttons
         rb = self.joystick.get_button(5)
-        #return[L_x_axis,L_y_axis,R_x_axis,R_y_axis,x_btn,a_btn,b_btn,y_btn,rb]
-        #return [x, y, a, b, rb]
         return [L_x_axis, L_y_axis, a_btn, b_btn, rb]
-        
     def manual_override(self):
         pygame.event.pump()
         return self.joystick.get_button(4) == 1
@@ -89,28 +78,40 @@ class Recorder(AGBlank):
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
         self.selectedSaveName = None
-        self.path = "/tmp"
-        self.populate_selector()
+        self.path = ""
+        #self.populate_selector()
+        self.work_dir = "/tmp"
+        self.check_game_name = ""
         
-    def populate_selector(self): 
-        d = os.listdir(self.path)
-        for i in d:
+    def show(self):
+        self.refresh()
+        super().show()
+        
+
+    def populate_selector(self):
+        self.selector.clear()
+        self.work_dir = self.worker.core.config.get_path("UserData")
+        print ("work_dir: {}".format(self.work_dir))
+        self.check_game_name = self.worker.core.rom_header.Name.decode().replace(" ", "_").lower()
+        print ("check_game_name: {}".format(self.check_game_name))
+        path = self.work_dir + "/" + self.check_game_name
+        print ("path: {}".format(path))
+        
+        for i in os.listdir(path):
             x = "{}".format(i)
-            #print(x)
             self.selector.addItem(x)
+            
         self.selector.addItem("__New_Game__")
+        
     
     def save_data(self):
         # screen shots go to a preset place
         self.worker.save_screenshot()
         # make / open outfile
         outfile = open(self.outputDir+'/'+'data.csv', 'a')
-
         # write line
         outfile.write( '{},'.format(int(time.time() * 1000)) + ','.join(map(str, self.controller_data)) + '\n' )
         outfile.close()
-
-        self.t += 1
         
     def update_(self):
         x = self.pad.read()
@@ -139,28 +140,45 @@ class Recorder(AGBlank):
         else:
             self.print_console("file!=\t{}\nNo Previous Save in this Directory\n\tGame ON!".format(x))
             
-    def get_save_dir(self):
-        return self.input.text()
         
     def setWorker(self, worker):
         self.worker = worker
         
-
+        
+    def check_worker(self): 
+        
+        self.work_dir = self.worker.core.config.get_path("UserData")
+        self.check_game_name = self.worker.core.rom_header.Name.decode().replace(" ", "_").lower()
+        d = os.listdir(self.work_dir)
+        self.populate_selector(d)
+        
+    def refresh(self):
+        print ("refreshing state")
+        loaded = False
+        self.worker.core_state_query(M64CORE_EMU_STATE)
+        loaded = self.worker.state in [M64EMU_RUNNING, M64EMU_PAUSED]
+        print ("game loaded: {}".format(loaded))
+        #selected = loaded and selected
+        self.selector.setEnabled(loaded)
+        
+        if loaded:
+            self.populate_selector()
         
     def Check_game_stats(self):
-        self.screenshot_path = "{}/screenshot/".format(self.worker.core.config.get_path("UserData"))
-        try:
-            self.screenshot_path += "{}".format(self.worker.core.rom_header.Name.decode().replace(" ", "_").lower())
-        except:
-            self.print_console("Not getting game info")
-        self.print_console(self.screenshot_path)
+        self.worker.core_state_query(M64CORE_EMU_STATE)
+        if self.worker.state in [M64EMU_RUNNING, M64EMU_PAUSED]:
+            self.check_worker()
+        if self.check_game_name is not "":
+            self.work_dir = os.path.join(self.work_dir,self.check_game_name)
+        self.print_console(self.work_dir)
+        
         
     def get_images(self,):
         self.worker.get_screenshot()
         
     def record(self):
         self.actionButton.setText('Stop')
-        save_name = self.get_save_dir()
+        save_name = self.input.text()
         
         if save_name == '__New_Game__' or '':
             save_name = "{}".format(int(time.time() * 1000))
@@ -191,22 +209,22 @@ class Recorder(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         if not self.recording:
+            
             self.record()
         else:
             self.stop()
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
-        #self.print_console("Click Check Button")
-        self.Check_game_stats()
+        #self.Check_game_stats()
+        self.refresh()
             
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
-        #print("selector item changed!")
         selected = self.selector.selectedItems()
+        self.inputLabel.setText(selected)
         self.selectedSaveName = selected[0].text()
-        #self.print_console("selected: {}".format(selected))
-        self.check_tail(self.selectedSaveName)
+        #self.check_tail(self.selectedSaveName)
         # our UI enforces that only one item is selected...
         if selected is not None and len(selected) > 0:
             self.actionButton.setEnabled(True)
