@@ -33,7 +33,7 @@ class AboutDialog(QDialog, Ui_AboutDialog):
         else:
             version = "Unknown"
         text = self.labelAbout.text()
-        text = text.replace("FRONTEND_VERSION", FRONTEND_VERSION)
+        text = text.replace("FRONTEND_VERSION", FRONTEND_VERSION + " Alpha Griffin Edition")
         text = text.replace("CORE_VERSION", version)
         self.labelAbout.setText(text)
         self.show()
