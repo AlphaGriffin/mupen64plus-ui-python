@@ -28,7 +28,7 @@ class AGAbout(QDialog, Ui_AGAbout):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
-    @pyqtSlot
+    @pyqtSlot()
     def on_website_clicked(self):
         """Open web browser to AlphaGriffin.com."""
         webbrowser.open('http://alphagriffin.com')

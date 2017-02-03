@@ -67,21 +67,25 @@ class xpad(object):
 class Recorder(AGBlank):
     """AG_Recorder Widget of MuPen64 Python Ui"""
     def __init__(self, parent=None, worker=None, core=None):
+        # init
         super().__init__()
-        self.setWindowTitle('AG Recorder')
-        self.actionButton.setEnabled(False)
         self.pad = xpad()
+        # set up the blanks
+        self.setWindowTitle('AG Recorder')
         self.selectorLabel.setText('Existing Save Folders:')
         self.inputLabel.setText('Save to:')
         self.actionButton.setText('Record')
+        self.actionButton.setEnabled(False)
+        # booleans are good
         self.recording = False
-        self.print_console("AlphaGriffin.com")
-        self.print_console(INTRO)
+        # preset some globals
         self.selectedSaveName = None
         self.path = ""
-        #self.populate_selector()
         self.work_dir = "/tmp"
         self.check_game_name = ""
+        # startup
+        self.print_console("AlphaGriffin.com")
+        self.print_console(INTRO)
         
     def show(self):
         self.refresh()
