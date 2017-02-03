@@ -504,6 +504,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_actionRecording_Console_triggered(self):
         """Shows recorder dialog."""
         recorder.show()
+    
+    @pyqtSlot()
+    def on_actionAGAbout_triggered(self):
+        """Shows Alpha Griffin about dialog."""
+        agabout.show()
 
 
 class View(QGraphicsView):

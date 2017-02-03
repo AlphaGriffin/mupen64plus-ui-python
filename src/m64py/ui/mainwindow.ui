@@ -156,19 +156,21 @@
     <addaction name="separator"/>
     <addaction name="actionFullscreen"/>
    </widget>
-   <widget class="QMenu" name="menuSmarts">
+   <widget class="QMenu" name="menuAlphaGriffin">
     <property name="title">
      <string>Alpha&amp;Griffin</string>
     </property>
     <addaction name="actionPad_Graph"/>
     <addaction name="actionRecording_Console"/>
+    <addaction name="separator"/>
+    <addaction name="actionAGAbout"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEmulation"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuSmarts"/>
+   <addaction name="menuAlphaGriffin"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="styleSheet">
@@ -669,6 +671,11 @@ QStatusBar { margin:0px; }</string>
   <action name="actionRecording_Console">
    <property name="text">
     <string>&amp;Recording Console</string>
+   </property>
+  </action>
+  <action name="actionAGAbout">
+   <property name="text">
+    <string>About Alpha Griffin Edition</string>
    </property>
   </action>
  </widget>
