@@ -149,6 +149,13 @@ p, li { white-space: pre-wrap; }
        <item>
         <layout class="QHBoxLayout" name="inputLayout">
          <item>
+          <widget class="QPushButton" name="checkButton">
+           <property name="text">
+            <string>Check</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="inputLabel">
            <property name="text">
             <string>Path:</string>

@@ -22,7 +22,8 @@ import pygame
 import os, sys
 from glob import glob as check
 import pandas as pd
-
+#from m64py.core.core import Core
+from m64py.utils import sl
 VERSION = sys.version
 
 INTRO =\
@@ -30,8 +31,15 @@ INTRO =\
 Recording Console by: AlphaGriffin.com GNU3
 Built in python 3.5.2\n
 You are running: {0:2}\n
-Check to see if a folder has good data in it, if not record into it.\n\n
-Select New Game, and press record to begin a new session.\n
+Step 1: Start a Game and Pause it.\n
+Step 2: Press the Check Button and Get the Game Creds\n
+Step 3: Choose New Game and Press record\n
+step 4: Play just 1 round of your game, pause it, then come back and stop your recording.\n
+Start here
+ |
+ |
+ |
+\ /
 """.format(VERSION,)
 
 class xpad(object):
@@ -69,9 +77,8 @@ class xpad(object):
         
 class Recorder(AGBlank):
     """AG_Recorder Widget of MuPen64 Python Ui"""
-    def __init__(self, parent=None, worker=None):
+    def __init__(self, parent=None, worker=None, core=None):
         super().__init__()
-        #print('here i am')
         self.setWindowTitle('AG Recorder')
         self.actionButton.setEnabled(False)
         self.pad = xpad()
@@ -79,11 +86,9 @@ class Recorder(AGBlank):
         self.inputLabel.setText('Save to:')
         self.actionButton.setText('Record')
         self.recording = False
-        #self.console.setText("")
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
         self.selectedSaveName = None
-        
         self.path = "/tmp"
         self.populate_selector()
         
@@ -94,12 +99,23 @@ class Recorder(AGBlank):
             #print(x)
             self.selector.addItem(x)
         self.selector.addItem("__New_Game__")
+    
+    def save_data(self):
+        # screen shots go to a preset place
+        self.worker.save_screenshot()
+        # make / open outfile
+        outfile = open(self.outputDir+'/'+'data.csv', 'a')
+
+        # write line
+        outfile.write( '{},'.format(int(time.time() * 1000)) + ','.join(map(str, self.controller_data)) + '\n' )
+        outfile.close()
+
+        self.t += 1
         
     def update_(self):
         x = self.pad.read()
         stamp = int(time.time() * 1000)
         y = ("{}:\t{}".format(stamp,x))
-        #print(y)
         self.print_console(y)
         return True
     
@@ -113,10 +129,7 @@ class Recorder(AGBlank):
         self.input.setText(path)
         
     def check_tail(self, path):
-        #self.print_console(path)
-        #print(path)
         x = '{}/{}/data.csv'.format(self.path,path)
-        #self.print_console(x)
         if check(x):
             df = pd.read_csv(x)
             top = df.head(5)
@@ -126,20 +139,29 @@ class Recorder(AGBlank):
         else:
             self.print_console("file!=\t{}\nNo Previous Save in this Directory\n\tGame ON!".format(x))
             
-    #@property
     def get_save_dir(self):
         return self.input.text()
         
     def setWorker(self, worker):
         self.worker = worker
-        return True
+        
+
+        
+    def Check_game_stats(self):
+        self.screenshot_path = "{}/screenshot/".format(self.worker.core.config.get_path("UserData"))
+        try:
+            self.screenshot_path += "{}".format(self.worker.core.rom_header.Name.decode().replace(" ", "_").lower())
+        except:
+            self.print_console("Not getting game info")
+        self.print_console(self.screenshot_path)
+        
+    def get_images(self,):
+        self.worker.get_screenshot()
         
     def record(self):
         self.actionButton.setText('Stop')
-        print ("save root path: {}".format(self.path))
-        print ("save selected name: {}".format(self.selectedSaveName))
-
         save_name = self.get_save_dir()
+        
         if save_name == '__New_Game__' or '':
             save_name = "{}".format(int(time.time() * 1000))
         self.print_console("save name: {}".format(save_name))
@@ -148,9 +170,9 @@ class Recorder(AGBlank):
         self.print_console("save full path: {}".format(save_path))
         
         self.poll_time = QTimer(self)
-        self.poll_time.timeout.connect(self.update_)
-        self.poll_time.start(100)    # in millis
-        self.worker.toggle_autoshots()
+        self.poll_time.timeout.connect(self.update_) # takes the pick and saves data
+        self.poll_time.start(200)    # in millis
+        #self.worker.toggle_autoshots()
         self.recording = True
         
     def stop(self):
@@ -160,6 +182,12 @@ class Recorder(AGBlank):
         self.recording = False
 
         
+    def on_stop_finish(self,): 
+        screen_shot_dir = 0
+        # copys the screenshot dir to the working dir
+        # asset len(csv) == len(#pics)
+        # copy data.csv to img folder and name it properly
+        
     @pyqtSlot()
     def on_actionButton_clicked(self):
         if not self.recording:
@@ -167,7 +195,11 @@ class Recorder(AGBlank):
         else:
             self.stop()
         
-        
+    @pyqtSlot()
+    def on_checkButton_clicked(self):
+        #self.print_console("Click Check Button")
+        self.Check_game_stats()
+            
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
         #print("selector item changed!")
@@ -181,8 +213,6 @@ class Recorder(AGBlank):
             self.set_save_dir(self.selectedSaveName) # set the text box to this name
         else:
             self.actionButton.setEnabled(False)
-            
-
 
 # We are keeping a persistent object around... may or may not be a good idea:
 recorder = Recorder()

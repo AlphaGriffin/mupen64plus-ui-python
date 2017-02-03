@@ -34,13 +34,13 @@ from m64py.frontend.settings import Settings
 from m64py.frontend.glwidget import GLWidget
 from m64py.ui.mainwindow_ui import Ui_MainWindow
 from m64py.frontend.recentfiles import RecentFiles
-
+import m64py.core as core
 from m64py.frontend.plotter import plotter
 from m64py.frontend.recorder import recorder
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
-
+    
     rom_opened = pyqtSignal()
     rom_closed = pyqtSignal()
     file_open = pyqtSignal(str, str)
@@ -63,7 +63,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         plotter.setParent(self)
         plotter.setWindowFlags(Qt.Dialog)
 
-        
+        self.core = core
 
         self.statusbar_label = QLabel()
         self.statusbar_label.setIndent(2)

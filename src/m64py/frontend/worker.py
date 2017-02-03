@@ -205,7 +205,7 @@ class Worker(QThread):
         """Saves screenshot."""
         self.core.take_next_screenshot()
 
-    def get_screenshot(self, path):
+    def get_screenshot(self, path, all=False):
         """Gets last saved screenshot."""
         rom_name = str(self.core.rom_header.Name).replace(
             ' ', '_').lower()
@@ -215,11 +215,14 @@ class Worker(QThread):
                 screenshots.append(os.path.join(
                     path, filename))
         if screenshots:
+            if all:
+                return sorted(screenshots)
             return sorted(screenshots)[-1]
         return None
 
     def save_image(self, title=True):
         """Saves snapshot or title image."""
+        print("FUCK THIS SHIT")
         data_path = self.core.config.get_path("UserData")
         capture = "title" if title else "snapshot"
         dst_path = os.path.join(data_path, capture)
