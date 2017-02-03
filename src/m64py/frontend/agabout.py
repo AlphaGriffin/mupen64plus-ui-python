@@ -16,13 +16,13 @@
 
 
 from PyQt5.QtWidgets import QDialog
-from m64py.ui.agblank_ui import Ui_AGBlank
+from m64py.ui.agabout_ui import Ui_AGAbout
 
 #
 # About the Alpha Griffin edition
 #
 
-class AGAbout(QDialog, Ui_AGBlank):
+class AGAbout(QDialog, Ui_AGAbout):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
