@@ -162,6 +162,7 @@
     </property>
     <addaction name="actionPad_Graph"/>
     <addaction name="actionRecording_Console"/>
+    <addaction name="actionTraining_Console"/>
     <addaction name="separator"/>
     <addaction name="actionAGAbout"/>
    </widget>
@@ -675,7 +676,12 @@ QStatusBar { margin:0px; }</string>
   </action>
   <action name="actionAGAbout">
    <property name="text">
-    <string>About Alpha Griffin Edition</string>
+    <string>&amp;About Alpha Griffin Edition</string>
+   </property>
+  </action>
+  <action name="actionTraining_Console">
+   <property name="text">
+    <string>Training Console</string>
    </property>
   </action>
  </widget>

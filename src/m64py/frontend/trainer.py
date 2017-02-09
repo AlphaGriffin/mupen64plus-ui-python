@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: SAW @ AlphaGriffin <Alphagriffin.com>
+# Author: Ruckusist @ AlphaGriffin <Alphagriffin.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,16 +25,30 @@ VERSION = sys.version
 # FIXME
 INTRO =\
 """
-Recording Console by: AlphaGriffin.com
-Built in python 3.5.2
-You are running: {0:2}
-Step 1: Start a Game and Pause it.
-Step 2: Press the Check Button and Get the Game Creds
-Step 3: Choose New Game and Press record
-step 4: Play just 1 round of your game, pause it, then come back and stop your recording.
-Notes:
-    Dont X close this window while its record... it will save proper, but crash out.
+TRAINING AND CONVERSION SOFTWARE:
+        Select from multiple saves of a single game to create a dataset. This
+        dataset will need to be converted to a proper image size and coloring.
+        Then the dataset needs to be split into training, testing and 
+        validation sets. From there a model can be created with the use of a 
+        single opimization pass with random settings to create and save your 
+        model. At this point you can take your model and optimization function
+        to AWS and pay the 5 cents to run your model for an hour or 2. Ill need
+        to add instructions for that. Unless you have sufficent graphics card
+        to try and train it on your machine.
+        
+        Step one. Pick multiple files from a single game.
+        Step Two. Batch Convert images and create a running numpy object(3d) of
+        2d arrays. Save That and the controller input(label) as Input:label for
+        your dataset.
+        Step Three. Split the dataset into 3 different single object python
+        dictionaries, which are Input:label for Train, test, and verifcation.
+        Step Four. Verify the shit out of previous steps and create and save a
+        model with a single optimization.
+        Step Five. Training a dataset is a matter of running through every
+        image in the training set and optimizing the necessary weights and
+        balances for the model to correctly give a label to an image.
 """.format(VERSION,)
+
 
 # FIXME ADD NOTATION FOR THIS
 class xpad(object):
@@ -45,6 +59,8 @@ class xpad(object):
             self.joystick.init()
         except:
             print('unable to connect to Xbox Controller')
+            
+            
     def read(self):
         pygame.event.pump()
         L_x_axis = self.joystick.get_axis(0)
@@ -59,16 +75,18 @@ class xpad(object):
         return self.joystick.get_button(4) == 1
         
         
-class Recorder(AGBlank):
+class Trainer(AGBlank):
     """AG_Recorder Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
         # init
         super().__init__(parent)
         self.setWorker(worker)
-#        QDialog.__init__(self, parent)
-        self.pad = xpad()
+        try:
+            self.pad = xpad()
+        except:
+            print("Going without it")
         # set up the blanks
-        self.setWindowTitle('AG Recorder')
+        self.setWindowTitle('AG Trainer')
         self.selectorLabel.setText('Existing Save Folders:')
         self.inputLabel.setText('Save to:')
         self.actionButton.setText('Record')
@@ -84,7 +102,7 @@ class Recorder(AGBlank):
         self.game_on = False   # is there a game runnning?
         # preset some globals
         self.selectedSaveName = None
-        self.path = ""
+        self.path = "./"
         
         # setWorker() above already sets self.work_dir
         #self.work_dir = "/tmp"
@@ -185,7 +203,7 @@ class Recorder(AGBlank):
         """Start a timer if none is running and keep checking back"""
         # start game checker
         if self.runningTimer == False:
-            self.print_console("Start a Game to begin, dont record til you are in gameplay")
+            #self.print_console("Startup Timer is starting at 200 millis..")
             self.runningTimer = QTimer(self)
             self.runningTimer.timeout.connect(self.check_game) # takes the pick and saves data
             self.runningTimer.start(200)    # in millis

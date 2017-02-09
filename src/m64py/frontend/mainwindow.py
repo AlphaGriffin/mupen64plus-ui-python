@@ -38,6 +38,7 @@ from m64py.frontend.recentfiles import RecentFiles
 from m64py.frontend.agabout import AGAbout
 from m64py.frontend.plotter import Plotter
 from m64py.frontend.recorder import Recorder
+from m64py.frontend.trainer import Trainer
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -101,6 +102,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.agabout = AGAbout(self)
         self.plotter = Plotter(self)
         self.recorder = Recorder(self, self.worker)
+        self.trainer = Trainer(self, self.worker)
 
     def closeEvent(self, event):
         self.worker.quit()
@@ -507,6 +509,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_actionRecording_Console_triggered(self):
         """Shows recorder dialog."""
         self.recorder.show()
+        
+    @pyqtSlot()
+    def on_actionTraining_Console_triggered(self):
+        """Shows ML_Training dialog."""
+        self.trainer.show()
     
     @pyqtSlot()
     def on_actionAGAbout_triggered(self):
