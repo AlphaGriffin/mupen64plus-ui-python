@@ -34,10 +34,10 @@ from m64py.frontend.settings import Settings
 from m64py.frontend.glwidget import GLWidget
 from m64py.ui.mainwindow_ui import Ui_MainWindow
 from m64py.frontend.recentfiles import RecentFiles
-import m64py.core as core
-from m64py.frontend.plotter import plotter
-from m64py.frontend.recorder import recorder
-from m64py.frontend.agabout import agabout
+
+from m64py.frontend.agabout import AGAbout
+from m64py.frontend.plotter import Plotter
+from m64py.frontend.recorder import Recorder
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -60,17 +60,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         logview.setParent(self)
         logview.setWindowFlags(Qt.Dialog)
-
-        plotter.setParent(self)
-        plotter.setWindowFlags(Qt.Dialog)
-
-        self.core = core
+        #plotter = Plotter()
+#        plotter.setParent(self)
+#        plotter.setWindowFlags(Qt.Dialog)
+#        recorder.setParent(self)
+#        recorder.setWindowFlags(Qt.Dialog)
+        
+        
 
         self.statusbar_label = QLabel()
         self.statusbar_label.setIndent(2)
         self.statusbar_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self.statusbar.addPermanentWidget(self.statusbar_label, 1)
-        self.update_status(self.tr("Welcome to M64Py version %s." % FRONTEND_VERSION))
+        self.update_status(self.tr("Welcome to M64Py version {}".format(FRONTEND_VERSION)))
 
         self.sizes = {
             SIZE_1X: self.action1X,
@@ -84,21 +86,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cheats = None
         self.maximized = False
         self.widgets_height = None
-
         self.settings = Settings(self)
         self.worker = Worker(self)
-
         self.vidext = bool(self.settings.get_int_safe("enable_vidext", 1))
-
         self.create_state_slots()
         self.create_widgets()
         self.recent_files = RecentFiles(self)
         self.connect_signals()
         self.worker.init()
+        print("#! DEBUGS #2")
+        #recorder.setWorker(self.worker)        
         
-        recorder.setParent(self)
-        recorder.setWindowFlags(Qt.Dialog)
-        recorder.setWorker(self.worker)
+        # Alpha Griffin Edition additions...
+        self.agabout = AGAbout(self)
+        self.plotter = Plotter(self)
+        self.recorder = Recorder(self, self.worker)
 
     def closeEvent(self, event):
         self.worker.quit()
@@ -499,17 +501,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     @pyqtSlot()
     def on_actionPad_Graph_triggered(self):
         """Shows plotter dialog."""
-        plotter.show()
+        self.plotter.show()
     
     @pyqtSlot()
     def on_actionRecording_Console_triggered(self):
         """Shows recorder dialog."""
-        recorder.show()
+        self.recorder.show()
     
     @pyqtSlot()
     def on_actionAGAbout_triggered(self):
         """Shows Alpha Griffin about dialog."""
-        agabout.show()
+        self.agabout.show()
 
 
 class View(QGraphicsView):
@@ -521,3 +523,4 @@ class View(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
         self.setScene(QGraphicsScene(self))
         self.scene().addItem(QGraphicsPixmapItem(QPixmap(":/images/front.png")))
+        print("#! DEBUGS #1")

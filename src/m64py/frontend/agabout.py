@@ -33,5 +33,5 @@ class AGAbout(QDialog, Ui_AGAbout):
         """Open web browser to AlphaGriffin.com."""
         webbrowser.open('http://alphagriffin.com')
 
-agabout = AGAbout()
+#agabout = AGAbout()
 

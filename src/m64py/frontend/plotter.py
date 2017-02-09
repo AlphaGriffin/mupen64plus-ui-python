@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from PyQt5.QtWidgets import QDialog
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from PyQt5.QtWidgets import QDialog#, QWidget
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas # this is breaking it!
 from matplotlib.figure import Figure
 from m64py.ui.plotter_ui import Ui_Plotter
 import numpy as np
@@ -26,6 +26,7 @@ from PyQt5 import QtCore
 import pygame
 
 class xpad(object):
+    """Example pygame controller read"""
     def __init__(self,options=None):
         try:
             pygame.init()
@@ -62,20 +63,37 @@ class xpad(object):
 class paddle_graph(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
     def __init__(self, parent=None, layout=None, width=5, height=4, dpi=100):
-        self.plotMem = 50                                # how much data to keep on the plot
-        self.plotData = [[0] * (5)] * self.plotMem       # mem storage for plot
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-        FigureCanvas.__init__(self, fig)
+        
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        FigureCanvas.__init__(self, self.fig)
+        self.controller = xpad()
         self.setParent(parent)
         layout.addWidget(self)
-        #FigureCanvas.updateGeometry(self)
-        timer = QtCore.QTimer(self)
-        timer.timeout.connect(self.update_figure)
-        timer.start(100)
-        self.controller = xpad()
-
+        self.setup_grapth()
+        
+        # Wait to turn the timer on until we need it, i.e. when the dialog is shown,
+        #   otherwise the mainwindow isn't quite ready yet and things crash
+        #self.timerOn()
+        
+        
+    def setup_grapth(self):     
+        self.plotMem = 50                                # how much data to keep on the plot
+        self.plotData = [[0] * (5)] * self.plotMem       # mem storage for plot
+        self.axes = self.fig.add_subplot(111)        
+        #print("changes")
+                
+    def timerOn(self):
+        """Starts a QTimer for paddle polling"""
+        self.padTimer = QtCore.QTimer(self)
+        self.padTimer.timeout.connect(self.update_figure)
+        self.padTimer.start(100)
+        
+    def timerOff(self):
+        """Stops the QTimer for paddle polling"""
+        self.padTimer.stop()
+        
     def update_figure(self):
+        """This is called by the Timer Function"""
         self.controller_data = self.controller.read()
         self.plotData.append(self.controller_data) # adds to the end of the list
         self.plotData.pop(0) # remove the first item in the list, ie the oldest
@@ -91,10 +109,18 @@ class paddle_graph(FigureCanvas):
         self.draw()
 
 class Plotter(QDialog, Ui_Plotter):
+    """Construct from the .ui file"""
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
-        self.graph_widget
-        self.test_graph = paddle_graph(self.graph_widget, self.graph_layout, width=6, height=4, dpi=125)
-
-plotter = Plotter()
+        self.graph = paddle_graph(self.graph_widget, self.graph_layout, width=6, height=4, dpi=125)
+    
+    def show(self):
+        """Do open window"""
+        super().show()
+        self.graph.timerOn()
+        
+    def hide(self):
+        """Do Close Window"""
+        super().hide()
+        self.graph.timerOff()
