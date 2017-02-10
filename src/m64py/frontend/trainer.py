@@ -100,7 +100,7 @@ class Process(object):
     		print ("CSV HAS NO DATA");
     		return None, None
     	
-    	  well# Get list of images in directory and sort it
+    	# Get list of images in directory and sort it
     	all_files = os.listdir(path)
     	print ("all_files: {}".format(all_files))
     	#images = [image for image in all_files if any(image.endswith('.png'))]
