@@ -110,8 +110,9 @@ class Recorder(AGBlank):
     def set_save_dir(self):
         """Sets the Input Field text"""
         #print ("in set_save_dir()")
+        # Adding a new subfolder for "TRAINING" 
         name = self.getGame()
-        name_path = os.path.join(self.work_dir, name)
+        name_path = os.path.join(self.work_dir, "training", name)
         if not os.path.isdir(name_path):
             print ("path does not exist, creating it now: {}".format(name_path))
             os.makedirs(name_path)
@@ -328,10 +329,11 @@ class Recorder(AGBlank):
                 y.append(i)
                 #print(shot_dir+i)
                 
-                mv_from = shot_dir+i
+                mv_from = os.path.join(shot_dir, i)
                 mv_to = self.save_name
                 print ("moving: {} -> {}".format(mv_from, mv_to))
                 shutil.move(mv_from, mv_to)
+            
             self.print_console("Got {} images, moved to {}".format(len(y),self.save_name))
             
             #
