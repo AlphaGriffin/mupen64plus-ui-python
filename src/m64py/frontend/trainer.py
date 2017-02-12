@@ -21,6 +21,8 @@ from PyQt5.QtWidgets import QAbstractItemView
 import os, sys#, time, shutil
 from glob import glob as check
 import pandas as pd
+import numpy as np
+from PIL import Image
 VERSION = sys.version
 
 # FIXME
@@ -50,10 +52,20 @@ TRAINING AND CONVERSION SOFTWARE:
         balances for the model to correctly give a label to an image.
 """.format(VERSION,)
 
-class Process(object):
-    def __init__(self):
-        self.test = 1
+class Prepare(object):
+    def __init__(self,options=None):
+        self.options = options
                 
+    def make_BW(self,rgb):
+        return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+    
+    def prepare_image(self, img):
+        pil_image = Image.open(img)                                           # open img
+        pil_image.thumbnail((self.image_w, self.image_h), Image.ANTIALIAS)    # resize
+        numpy_img = np.array(pil_image)                                       # convert to numpy
+        grey_numpy_image = self.make_BW(numpy_img)                            # reduce to BW
+        return grey_numpy_image
+        
     def gamepadImageMatcher(path):
         #INFO = "SAW -- matches gamepad csv data rows to images based on timestamps\nReturns two matching arrays"
 	
@@ -181,10 +193,11 @@ class Trainer(AGBlank):
         self.print_console(INTRO)
         self.selected = None
         self.selectedRom = ""
+        self.gamePath = ""
         self.selectingRom = True
         
         # Use the processor
-        self.processor = Process()
+        self.process = Prepare()
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.work_dir, "training")
@@ -193,14 +206,57 @@ class Trainer(AGBlank):
         
         
     """ TEST FUNCTIONS """
+    def processing_(self, folders=""):
+        """This has 3 steps, move files, convert images, create bins"""
+        if folders is "": folders = self.selection
+        saveDir = os.path.join(self.work_dir, "datasets/{}/".format(self.currentGame))
+        if not os.path.isdir(saveDir):
+            self.print_console("Creating folder: {}".format(saveDir))
+            os.mkdirs(saveDir)
+        datasetIndex = len(os.listdir(saveDir))
+        dataset_x = []
+        dataset_y = []
+        datasetFilename_x = "_{}_dataset_{}_image.npy".format(self.currentGame,datasetIndex)
+        datasetFilename_y = "_{}_dataset_{}_label.npy".format(self.currentGame,datasetIndex)
+        self.print_console("#############################################")
+        self.print_console("# Processing Game folders to dataset")
+        self.print_console("# Game Name: {}".format(self.currentGame))
+        self.print_console("# Dataset Path: {}".format(saveDir))
+        self.print_console("# Number of saves to process: {}".format(len(folders)))
+        self.print_console("#############################################")
+        
+        # for each folder given...
+        for i in folders:
+            current_path = os.path.join(self.work_dir,self.currentGame,i)
+            self.print_console("# Processing folder: {}".format(current_path))
+            self.print_console("# Step 1: Assert #imgs == #labels")
+            imgs, labels = self.process.gamepadImageMatcher(current_path)
+            
+            # labels first, cause why?? easier i guess...
+            dataset_y.append(labels) # BOOM!
+            
+            # then images... cause... f the dang...
+            self.print_console("# Step 2: Convert img to BW np array of (x,y)")
+            for image in imgs:
+                img = self.process.prepare_image(image) # process the image
+                dataset_x.append(img)
+        
+        self.print_console("# Step 3: Save files...\n\t{}\n\t{}".format(
+                           datasetFilename_x, datasetFilename_y))
+        dataset_x = np.asarray(dataset_x)
+        dataset_y = np.concatenate(dataset_y)
+    
+        np.save(saveDir + datasetFilename_x, dataset_x)
+        np.save(saveDir + datasetFilename_y, dataset_y)
+        self.print_console("# Finished preparing dataset")
+        
+    
+    """ Selector FUNCTIONS """
     def getSaves(self):
         """
-        This should comb the workdir and put together some stats.
-        GameName : Amount of saves : ??
+        Creates a list of Games that have saves and resets the selected game.
         """
         self.gamesList = os.listdir(self.work_dir)
-        #self.print_console("Games Played:\n" + "\n".join(x for x in self.gamesList))
-        #self.build_selector(self.work_dir)
         self.selector.setEnabled(True)
         self.selectingRom = True
         self.actionButton.setEnabled(False)
@@ -208,24 +264,25 @@ class Trainer(AGBlank):
         self.build_selector()
         
     def selection(self):
-        selection = []
+        """This deals with the multi select"""
+        self.selection = []
         for x in self.selected:
-            selection.append(x.text())
-        select_string = ", ".join(x for x in selection)
-        self.print_console(select_string)
+            self.selection.append(x.text())
+        self.select_string = ", ".join(x for x in self.selection)
+        self.print_console(self.select_string)
         
         # if we have picked a game
-        if any(select_string in s for s in self.gamesList):
+        if any(self.select_string in s for s in self.gamesList):
             self.currentGame = self.selected[0].text()
             self.selectingRom = False
-            x = os.path.join(self.work_dir,self.currentGame)
+            self.gamePath = os.path.join(self.work_dir,self.currentGame)
             if os.path.isdir(x):
                 self.print_console("Game Save Dir: {}".format(x))
                 self.build_selector(folder=x)
                 return
         
         # if we need to go back and pick a different game
-        if len(select_string) is 3:
+        if len(self.select_string) is 3:
             self.print_console("going back to choose another game!")
             self.getSaves()
             return
@@ -265,14 +322,12 @@ class Trainer(AGBlank):
         self.selector.clear()
         if not self.selectingRom or folder is not "": 
             self.selector.addItem("../")
-            x = sorted(os.listdir(folder))
-            for i in x:
-                #print(i)
+            for i in sorted(os.listdir(folder)):
                 self.selector.addItem("{}".format(i))   
         else:
             for i in self.gamesList:
                 self.selector.addItem("{}".format(i))
-        # then we need to be selecting folders to process
+        """then we need to be selecting folders to process"""
                     
             
     ###
@@ -290,11 +345,12 @@ class Trainer(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Process the files"""
-        self.test = 0
+        self.processing_()
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
+        # reset and select game again...
         self.getSaves()
          
     @pyqtSlot()
