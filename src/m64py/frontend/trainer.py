@@ -15,9 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtCore import pyqtSlot, QTimer
-import os, sys, time, shutil
+from PyQt5.QtGui import QTextCursor#, QAbstractItemView
+from PyQt5.QtCore import pyqtSlot#, QTimer
+import os, sys#, time, shutil
 from glob import glob as check
 import pandas as pd
 VERSION = sys.version
@@ -163,6 +163,7 @@ class Trainer(AGBlank):
         super().__init__(parent)
         self.setWindowTitle('AG Trainer')
         self.selectorLabel.setText('Existing Save Folders:')
+        #self.selector.setSelectionMode(QAbstractItemView.MultiSelection)
         self.inputLabel.setText('Working Directory(s):')
         self.actionButton.setText('Process')
         self.actionButton.setEnabled(False)
@@ -181,13 +182,9 @@ class Trainer(AGBlank):
         # Use the processor
         self.processor = Process()
         self.worker = worker
+        self.work_dir = self.worker.core.config.get_path("UserData")
+        self.work_dir = os.path.join(self.work_dir, "training")
         
-        # this needstart
-        self.startup()
-        
-    def startup(self):
-        """ repeat at the end of every process """
-        self.setWorker(self.worker)
         self.getSaves()
         
         
@@ -196,12 +193,32 @@ class Trainer(AGBlank):
         """
         This should comb the workdir and put together some stats.
         GameName : Amount of saves : ??
-        
         """
-        print("getSave: {}".format(self.work_dir))
-        self.build_selector(self.work_dir)
+        self.gamesList = os.listdir(self.work_dir)
+        self.print_console("Games Played:\n" + "\n".join(x for x in self.gamesList))
+        #self.build_selector(self.work_dir)
         self.selector.setEnabled(True)
         self.selectingRom = True
+        self.build_selector()
+        
+    def selection(self):
+        self.print_console(self.selected)
+        
+        # if we have picked a game
+        if any(self.selected in s for s in self.gamesList):
+            self.currentGame = self.selected
+            self.selectingRom = False
+            x = os.path.join(self.work_dir,self.selected)
+            self.print_console(x)
+            if os.path.isdir(x):
+                self.build_selector(x)
+        
+        # we need to pick a game!
+        else:
+            self.currentGame = False
+            self.selectingRom = True
+            self.getSaves()
+        
         
     def selector_change(self):
         print("use of selector change")
@@ -245,7 +262,6 @@ class Trainer(AGBlank):
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.work_dir, "training")
-        #print(self.work_dir)
 
     def check_tail(self, path):
         """Read and print from the CSV file if it exists"""
@@ -259,14 +275,22 @@ class Trainer(AGBlank):
         else:
             self.print_console("file!=\t{}\nNo Previous Save in this Directory\n\tGame ON!".format(x))
             
-    def build_selector(self, folder):
+    def build_selector(self, folder=""):
         """This populates the save folder list"""
         self.selector.clear()
-        if not self.selectingRom: self.selector.addItem("..")
-        for i in sorted(os.listdir(folder)):
-            x = "{}".format(i)
-            self.selector.addItem(x)
-        
+        # add a go back button at the top
+        # if not in selecting game
+        if not self.selectingRom or folder is not "": 
+            self.selector.addItem("../")
+            for i in sorted(os.listdir(folder)):
+                x = "{}".format(i)
+                self.selector.addItem(x)   
+        else:
+            for i in self.gamesList:
+                self.selector.addItem("{}".format(i))
+        # then we need to be selecting folders to process
+                    
+            
     ###
     ###  These Slots are set in the UI designer and need to be reset here
     ###
@@ -294,10 +318,11 @@ class Trainer(AGBlank):
     # This does not happen in the RECODING CONSOLE anymore        
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
-        print(self.selector.currentItem())
-        self.selected = self.selector.currentItem().text()
+        #self.test = 0
+        self.selected = self.selector.selectedItems()
+        self.print_console(self.selected)
+        #self.selection()
         
-        self.selector_change()
         
     @pyqtSlot()
     def closeEvent(self,event=False):
