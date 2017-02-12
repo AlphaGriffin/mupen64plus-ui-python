@@ -15,8 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtGui import QTextCursor#, QAbstractItemView
+from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import pyqtSlot#, QTimer
+from PyQt5.QtWidgets import QAbstractItemView
 import os, sys#, time, shutil
 from glob import glob as check
 import pandas as pd
@@ -163,10 +164,13 @@ class Trainer(AGBlank):
         super().__init__(parent)
         self.setWindowTitle('AG Trainer')
         self.selectorLabel.setText('Existing Save Folders:')
+        
+        self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
         #self.selector.setSelectionMode(QAbstractItemView.MultiSelection)
         self.inputLabel.setText('Working Directory(s):')
         self.actionButton.setText('Process')
         self.actionButton.setEnabled(False)
+        self.actionButton.setText('Game Select')
         self.checkButton.setEnabled(True)
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
@@ -195,67 +199,48 @@ class Trainer(AGBlank):
         GameName : Amount of saves : ??
         """
         self.gamesList = os.listdir(self.work_dir)
-        self.print_console("Games Played:\n" + "\n".join(x for x in self.gamesList))
+        #self.print_console("Games Played:\n" + "\n".join(x for x in self.gamesList))
         #self.build_selector(self.work_dir)
         self.selector.setEnabled(True)
         self.selectingRom = True
+        self.actionButton.setEnabled(False)
+        self.currentGame = False
         self.build_selector()
         
     def selection(self):
-        self.print_console(self.selected)
+        selection = []
+        for x in self.selected:
+            selection.append(x.text())
+        select_string = ", ".join(x for x in selection)
+        self.print_console(select_string)
         
         # if we have picked a game
-        if any(self.selected in s for s in self.gamesList):
-            self.currentGame = self.selected
+        if any(select_string in s for s in self.gamesList):
+            self.currentGame = self.selected[0].text()
             self.selectingRom = False
-            x = os.path.join(self.work_dir,self.selected)
-            self.print_console(x)
+            x = os.path.join(self.work_dir,self.currentGame)
             if os.path.isdir(x):
-                self.build_selector(x)
+                self.print_console("Game Save Dir: {}".format(x))
+                self.build_selector(folder=x)
+                return
         
-        # we need to pick a game!
-        else:
-            self.currentGame = False
-            self.selectingRom = True
+        # if we need to go back and pick a different game
+        if len(select_string) is 3:
+            self.print_console("going back to choose another game!")
             self.getSaves()
-        
-        
-    def selector_change(self):
-        print("use of selector change")
-        self.print_console(self.selected)
-        if self.selectingRom:    
-            self.selectedRom = self.selected
-            print("use of selector change1")
-            self.build_selector(os.path.join(self.work_dir,self.selectedRom))
-            print("use of selector change2")
-            self.selectingRom = False
-        else:
-            print("use of join selected")
-            if self.selected is "..":
-                print(self.selected)
-                self.selectingRom = True
-                self.getSaves()
-                return
-            print("warning")
-            savesList = os.path.join(self.work_dir,self.selectedRom, self.selected)
-            self.print_console(savesList)
+            return
             
-        """    
-        for i in os.listdir(root_dir):
-            self.print_console("Game Name: {}".format(i))
-            if not os.path.isdir(os.path.join(root_dir,i)):
-                print("error#warning")
-                return
-            x = os.listdir(os.path.join(root_dir,i))
-        """
-                    
+        # if we have a list of Dirs to work on ...
+        self.actionButton.setEnabled(True)
+        # click on the button!!!
+        
         
     """ EASY GOOD WORKING FUNC's """
     def print_console(self, msg): 
         """Takes a String and prints to console"""
         self.console.moveCursor(QTextCursor.End)
         self.console.insertPlainText("{}\n".format(msg))
-        print(msg)
+        #print(msg)
         
     def setWorker(self, worker):
         """Get Worker(ref) from main code and check the local Userdata folder"""
@@ -278,13 +263,12 @@ class Trainer(AGBlank):
     def build_selector(self, folder=""):
         """This populates the save folder list"""
         self.selector.clear()
-        # add a go back button at the top
-        # if not in selecting game
         if not self.selectingRom or folder is not "": 
             self.selector.addItem("../")
-            for i in sorted(os.listdir(folder)):
-                x = "{}".format(i)
-                self.selector.addItem(x)   
+            x = sorted(os.listdir(folder))
+            for i in x:
+                #print(i)
+                self.selector.addItem("{}".format(i))   
         else:
             for i in self.gamesList:
                 self.selector.addItem("{}".format(i))
@@ -305,24 +289,25 @@ class Trainer(AGBlank):
     
     @pyqtSlot()
     def on_actionButton_clicked(self):
-        """Start - Stop record button"""
+        """Process the files"""
         self.test = 0
-        #if not self.recording: self.record()
-        #else: self.stop()
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
         self.getSaves()
-    
-    # This does not happen in the RECODING CONSOLE anymore        
+         
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
-        #self.test = 0
         self.selected = self.selector.selectedItems()
-        self.print_console(self.selected)
-        #self.selection()
+        #self.print_console(self.selected)
+        #for x in self.selected: self.print_console(x.text()) # good test!
         
+        # protect deselect... for gods sake...
+        if len(self.selected) > 0:
+            self.selection()
+            return
+        self.actionButton.setEnabled(False)
         
     @pyqtSlot()
     def closeEvent(self,event=False):
