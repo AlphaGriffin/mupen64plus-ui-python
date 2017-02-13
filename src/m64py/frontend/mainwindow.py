@@ -39,6 +39,7 @@ from m64py.frontend.agabout import AGAbout
 from m64py.frontend.plotter import Plotter
 from m64py.frontend.recorder import Recorder
 from m64py.frontend.trainer import Trainer
+from m64py.frontend.processing import Processing
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -103,6 +104,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.plotter = Plotter(self)
         self.recorder = Recorder(self, self.worker)
         self.trainer = Trainer(self, self.worker)
+        self.processing = Processing(self, self.worker)
 
     def closeEvent(self, event):
         self.worker.quit()
@@ -516,6 +518,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.trainer.show()
     
     @pyqtSlot()
+    def on_actionProcessing_Console_triggered(self):
+        """Shows ML_Training dialog."""
+        self.processing.show()
+        
+    @pyqtSlot()
     def on_actionAGAbout_triggered(self):
         """Shows Alpha Griffin about dialog."""
         self.agabout.show()
@@ -530,4 +537,3 @@ class View(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
         self.setScene(QGraphicsScene(self))
         self.scene().addItem(QGraphicsPixmapItem(QPixmap(":/images/front.png")))
-        print("#! DEBUGS #1")

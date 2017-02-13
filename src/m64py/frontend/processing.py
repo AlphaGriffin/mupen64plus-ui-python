@@ -16,11 +16,9 @@
 
 from m64py.frontend.agblank import AGBlank
 from PyQt5.QtGui import QTextCursor
-from PyQt5.QtCore import pyqtSlot#, QTimer
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QAbstractItemView
-import os, sys#, time, shutil
-#from glob import glob as check
-#import pandas as pd
+import os, sys
 import numpy as np
 from PIL import Image
 VERSION = sys.version
@@ -171,7 +169,7 @@ class Prepare(object):
 
         
         
-class Trainer(AGBlank):
+class Processing(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
         super().__init__(parent)
