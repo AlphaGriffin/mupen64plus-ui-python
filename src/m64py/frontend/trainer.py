@@ -70,7 +70,7 @@ class Prepare(object):
         #INFO = "SAW -- matches gamepad csv data rows to images based on timestamps\nReturns two matching arrays"
         
         
-    	   # Open CSV for reading
+        # Open CSV for reading
         csv_path = os.path.join(path, "data.csv")
         print("about to open: {}".format(csv_path))
         csv_io = open(csv_path, 'r')
@@ -103,12 +103,12 @@ class Prepare(object):
         # We're going to build up 2 arrays of matching size:
         keep_csv = []
         keep_images = []
-    	
+    
         # Prime the pump (queue)...
         prev_line = csv.pop(0)
         prev_csvtime = int(prev_line[0])
         print ("line 0: {}".format(prev_line))
-    	
+    
         #prev_image = images[0]
         #prev_imgtime = 0
         print("# DEBUGS!!! - 1")
@@ -117,8 +117,8 @@ class Prepare(object):
             imgfile = images[0]
             print ("imgfile: {}".format(imgfile))
             print("# DEBUGS!!! - 2")
-    		 # Get image time:
-    		 #     Cut off the "gamename-" from the front and the ".png" from the end
+            # Get image time:
+            #     Cut off the "gamename-" from the front and the ".png" from the end
             hyphen = imgfile.rfind('-') # Get last index of '-'
             if hyphen < 0:
                 print ("UNEXPECTED FILENAME, ABORTING: {}".format(imgfile))
@@ -150,31 +150,31 @@ class Prepare(object):
                     print ("line: {}".format(line))
                     csvtime = int(line[0])
                     print ("csvtime: {}".format(str(csvtime)))
-    				
+    
                     if csvtime >= imgtime:
                         # We overshot the input queue... ready to
                         # keep the previous data line
                         print ("keeping line: {}".format(prev_csvtime))
                         keep_csv.append(prev_line)
                         lastKeptWasImage = False
-    					
+    
                         prev_line = line
                         prev_csvtime = csvtime
-    				
+    
                         if csvtime >= imgtime:
                             break;
-    					
+    
                     if not csv:
                         print ("OUT OF CSV DATA")
                         if lastKeptWasImage:
                             print ("keeping line: {}".format(prev_csvtime))
                             keep_csv.append(prev_line)
                         break
-    				
-                else:
-                    print ("dropping image: {}".format(imgtime))
-                    del images[0]
-    		
+    
+            else:
+                print ("dropping image: {}".format(imgtime))
+                del images[0]
+    
         print ("len(keep_data): {}".format(len(keep_csv)))
         print ("len(keep_images): {}".format(len(keep_images)))
         #self.print_console("MATCHED RESULTS COUNT: {} <--> {}".format(len(keep_csv),len(keep_images)))
