@@ -66,10 +66,11 @@ class Prepare(object):
         grey_numpy_image = self.make_BW(numpy_img)                            # reduce to BW
         return grey_numpy_image
         
-    def gamepadImageMatcher(path):
+    def gamepadImageMatcher(self, path):
         #INFO = "SAW -- matches gamepad csv data rows to images based on timestamps\nReturns two matching arrays"
-	
-    	  # Open CSV for reading
+        
+        
+    	   # Open CSV for reading
         csv_path = os.path.join(path, "data.csv")
         print("about to open: {}".format(csv_path))
         csv_io = open(csv_path, 'r')
@@ -110,11 +111,12 @@ class Prepare(object):
     	
         #prev_image = images[0]
         #prev_imgtime = 0
-    	
+        print("# DEBUGS!!! - 1")
         # Find next matching image
         while images:
             imgfile = images[0]
             print ("imgfile: {}".format(imgfile))
+            print("# DEBUGS!!! - 2")
     		 # Get image time:
     		 #     Cut off the "gamename-" from the front and the ".png" from the end
             hyphen = imgfile.rfind('-') # Get last index of '-'
@@ -124,7 +126,16 @@ class Prepare(object):
             imgtime = int(imgfile[hyphen+1:-4]) # cut it out!
             print ("imgtime: {}".format(imgtime))
             lastKeptWasImage = False # Did we last keep an image, or a line?
+            print("# DEBUGS!!! - 3")
+            
+            """
+            BUG REPORT: Print output with no crash keeps bouncing from Debug 2
+            to debug 3 and does not change images... just bounces super fast.
+            """
+            
+            
             if imgtime > prev_csvtime:
+                print("# DEBUGS!!! - 4")
                 print ("keeping image: {}".format(imgtime))
                 keep_images.append(imgfile)
                 del images[0]
@@ -134,6 +145,7 @@ class Prepare(object):
                 # We just kept an image, so we need to keep a
                 #corresponding input row too
                 while csv:
+                    print("# DEBUGS!!! - 5")
                     line = csv.pop(0)
                     print ("line: {}".format(line))
                     csvtime = int(line[0])
@@ -192,6 +204,7 @@ class Trainer(AGBlank):
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
         self.selected = None
+        self.selection = []
         self.selectedRom = ""
         self.gamePath = ""
         self.selectingRom = True
@@ -200,6 +213,7 @@ class Trainer(AGBlank):
         self.process = Prepare()
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
+        self.root_dir = self.work_dir
         self.work_dir = os.path.join(self.work_dir, "training")
         
         self.getSaves()
@@ -208,11 +222,16 @@ class Trainer(AGBlank):
     """ TEST FUNCTIONS """
     def processing_(self, folders=""):
         """This has 3 steps, move files, convert images, create bins"""
-        if folders is "": folders = self.selection
-        saveDir = os.path.join(self.work_dir, "datasets/{}/".format(self.currentGame))
+        
+        # this should be global but its breaking!
+        proc = Prepare()
+        
+        if folders is "": 
+            folders = self.selection
+        saveDir = os.path.join(self.root_dir, "datasets", self.currentGame)
         if not os.path.isdir(saveDir):
             self.print_console("Creating folder: {}".format(saveDir))
-            os.mkdirs(saveDir)
+            os.mkdir(saveDir)
         datasetIndex = len(os.listdir(saveDir))
         dataset_x = []
         dataset_y = []
@@ -230,15 +249,16 @@ class Trainer(AGBlank):
             current_path = os.path.join(self.work_dir,self.currentGame,i)
             self.print_console("# Processing folder: {}".format(current_path))
             self.print_console("# Step 1: Assert #imgs == #labels")
-            imgs, labels = self.process.gamepadImageMatcher(current_path)
+            imgs, labels = proc.gamepadImageMatcher(current_path)
             
+            self.print_console("# DEBUGS!!! - 1")
             # labels first, cause why?? easier i guess...
             dataset_y.append(labels) # BOOM!
             
             # then images... cause... f the dang...
             self.print_console("# Step 2: Convert img to BW np array of (x,y)")
             for image in imgs:
-                img = self.process.prepare_image(image) # process the image
+                img = proc.prepare_image(image) # process the image
                 dataset_x.append(img)
         
         self.print_console("# Step 3: Save files...\n\t{}\n\t{}".format(
@@ -263,26 +283,25 @@ class Trainer(AGBlank):
         self.currentGame = False
         self.build_selector()
         
-    def selection(self):
-        """This deals with the multi select"""
-        self.selection = []
+    def selecterator(self):
+        selection = []
         for x in self.selected:
-            self.selection.append(x.text())
-        self.select_string = ", ".join(x for x in self.selection)
-        self.print_console(self.select_string)
-        
+            selection.append(x.text())
+        select_string = ", ".join(x for x in selection)
+        self.print_console(select_string)
+        self.selection = selection
         # if we have picked a game
-        if any(self.select_string in s for s in self.gamesList):
+        if any(select_string in s for s in self.gamesList):
             self.currentGame = self.selected[0].text()
             self.selectingRom = False
-            self.gamePath = os.path.join(self.work_dir,self.currentGame)
+            x = os.path.join(self.work_dir,self.currentGame)
             if os.path.isdir(x):
                 self.print_console("Game Save Dir: {}".format(x))
                 self.build_selector(folder=x)
                 return
         
         # if we need to go back and pick a different game
-        if len(self.select_string) is 3:
+        if len(select_string) is 3:
             self.print_console("going back to choose another game!")
             self.getSaves()
             return
@@ -291,32 +310,19 @@ class Trainer(AGBlank):
         self.actionButton.setEnabled(True)
         # click on the button!!!
         
-        
     """ EASY GOOD WORKING FUNC's """
     def print_console(self, msg): 
         """Takes a String and prints to console"""
         self.console.moveCursor(QTextCursor.End)
         self.console.insertPlainText("{}\n".format(msg))
-        #print(msg)
+        print(msg)
         
     def setWorker(self, worker):
         """Get Worker(ref) from main code and check the local Userdata folder"""
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.work_dir, "training")
-
-    def check_tail(self, path):
-        """Read and print from the CSV file if it exists"""
-        x = '{}/{}/data.csv'.format(self.work_dir,path)
-        if check(x):
-            df = pd.read_csv(x)
-            top = df.head(5)
-            bottom = df.tail(10)
-            concatenated = pd.concat([top,bottom])
-            self.print_console("This looks like an Unprocessed Folder\n{}\nRecord in another Dir".format(concatenated))
-        else:
-            self.print_console("file!=\t{}\nNo Previous Save in this Directory\n\tGame ON!".format(x))
-            
+           
     def build_selector(self, folder=""):
         """This populates the save folder list"""
         self.selector.clear()
@@ -352,6 +358,7 @@ class Trainer(AGBlank):
         """Test Button for pressing broken parts"""
         # reset and select game again...
         self.getSaves()
+        self.print_console(self.selection)
          
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
@@ -361,7 +368,7 @@ class Trainer(AGBlank):
         
         # protect deselect... for gods sake...
         if len(self.selected) > 0:
-            self.selection()
+            self.selecterator()
             return
         self.actionButton.setEnabled(False)
         

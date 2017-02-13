@@ -339,6 +339,7 @@ class Recorder(AGBlank):
             #
             # SAW - this is where gamepadImageMatcher stuff happened
             # (now in tf_utils/trainutils.py)
+            # ruckusist - now in training.py
             #
             
         else:
