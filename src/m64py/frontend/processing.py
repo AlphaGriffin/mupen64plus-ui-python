@@ -26,7 +26,7 @@ VERSION = sys.version
 # FIXME
 INTRO =\
 """
-TRAINING AND CONVERSION SOFTWARE:
+CONVERSION SOFTWARE:
         Select from multiple saves of a single game to create a dataset. This
         dataset will need to be converted to a proper image size and coloring.
         Then the dataset needs to be split into training, testing and 
@@ -173,7 +173,7 @@ class Processing(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
         super().__init__(parent)
-        self.setWindowTitle('AG Trainer')
+        self.setWindowTitle('AG Processing')
         self.selectorLabel.setText('Existing Save Folders:')
         self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.inputLabel.setText('Working Directory(s):')
@@ -181,6 +181,7 @@ class Processing(AGBlank):
         self.actionButton.setEnabled(False)
         self.actionButton.setText('Game Select')
         self.checkButton.setEnabled(True)
+        self.checkButton.setText('Pick Game')
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
         
@@ -200,17 +201,14 @@ class Processing(AGBlank):
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.root_dir = self.work_dir
         self.work_dir = os.path.join(self.work_dir, "training")
-        
         self.getSaves()
         
         
     """ TEST FUNCTIONS """
     def processing_(self, folders=""):
         """This has 3 steps, move files, convert images, create bins"""
-        
         # this should be global but its breaking!
         proc = Prepare()
-        
         if folders is "": 
             folders = self.selection
         saveDir = os.path.join(self.root_dir, "datasets", self.currentGame)
@@ -235,15 +233,9 @@ class Processing(AGBlank):
             self.print_console("# Processing folder: {}".format(current_path))
             self.print_console("# Step 1: Assert #imgs == #labels")
             labels, imgs = proc.gamepadImageMatcher(current_path)
-            
-            #self.print_console("# DEBUGS!!! - 1")
-            # labels first, cause why?? easier i guess...
             dataset_y.append(labels) # BOOM!
-            self.print_console("# Debugs!! 1")
-            # then images... cause... f the dang...
             self.print_console("# Step 2: Convert img to BW np array of (x,y)")
             for image in imgs:
-                self.print_console(os.path.join(current_path,image))
                 img = proc.prepare_image(os.path.join(current_path,image)) # process the image
                 dataset_x.append(img)
         
@@ -274,7 +266,7 @@ class Processing(AGBlank):
         for x in self.selected:
             selection.append(x.text())
         select_string = ", ".join(x for x in selection)
-        self.print_console(select_string)
+        self.input.setText(select_string)
         self.selection = selection
         # if we have picked a game
         if any(select_string in s for s in self.gamesList):
@@ -301,7 +293,7 @@ class Processing(AGBlank):
         """Takes a String and prints to console"""
         self.console.moveCursor(QTextCursor.End)
         self.console.insertPlainText("{}\n".format(msg))
-        print(msg)
+        #print(msg)
         
     def setWorker(self, worker):
         """Get Worker(ref) from main code and check the local Userdata folder"""
@@ -344,7 +336,7 @@ class Processing(AGBlank):
         """Test Button for pressing broken parts"""
         # reset and select game again...
         self.getSaves()
-        self.print_console(self.selection)
+        #self.print_console(self.selection)
          
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):

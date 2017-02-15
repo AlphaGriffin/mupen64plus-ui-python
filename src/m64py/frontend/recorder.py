@@ -380,5 +380,7 @@ class Recorder(AGBlank):
         
     @pyqtSlot()
     def closeEvent(self,event=False):
-        self.stop()
-        super().closeEvent()
+        self.test = 0
+        #if self.recording:
+        #    self.stop()
+        #super().closeEvent()

@@ -95,9 +95,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.create_widgets()
         self.recent_files = RecentFiles(self)
         self.connect_signals()
-        self.worker.init()
-        print("#! DEBUGS #2")
-        #recorder.setWorker(self.worker)        
+        self.worker.init()     
         
         # Alpha Griffin Edition additions...
         self.agabout = AGAbout(self)
