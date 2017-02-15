@@ -142,7 +142,7 @@ class Prepare(object):
                         # We overshot the input queue... ready to
                         # keep the previous data line
                         #print ("keeping line: {}".format(prev_csvtime))
-                        keep_csv.append(prev_line)
+                        keep_csv.append(prev_line[1:]) # truncate off the timestamp
                         lastKeptWasImage = False
     
                         prev_line = line
@@ -155,7 +155,7 @@ class Prepare(object):
                         #print ("OUT OF CSV DATA")
                         if lastKeptWasImage:
                             #print ("keeping line: {}".format(prev_csvtime))
-                            keep_csv.append(prev_line)
+                            keep_csv.append(prev_line[1:]) # truncate off the timestamp
                         break
     
             else:
