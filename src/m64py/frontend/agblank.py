@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: SAW @ AlphaGriffin <Alphagriffin.com>
+# Author: lannocc @ AlphaGriffin <Alphagriffin.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,13 @@ class AGBlank(QDialog, Ui_AGBlank):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
+
+    def print_console(self, msg): 
+        """Takes a String and prints to console"""
+        self.console.moveCursor(QTextCursor.End)
+        self.console.insertPlainText("{}\n".format(msg))
+        #print(msg)
+ 
 
 #    @pyqtSlot()
 #    def on_actionRecording_Console_triggered(self):
