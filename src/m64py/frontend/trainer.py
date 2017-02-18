@@ -33,28 +33,12 @@ VERSION = sys.version
 # FIXME
 INTRO =\
 """
-TRAINING AND CONVERSION SOFTWARE:
-        Select from multiple saves of a single game to create a dataset. This
-        dataset will need to be converted to a proper image size and coloring.
-        Then the dataset needs to be split into training, testing and 
-        validation sets. From there a model can be created with the use of a 
-        single opimization pass with random settings to create and save your 
-        model. At this point you can take your model and optimization function
-        to AWS and pay the 5 cents to run your model for an hour or 2. Ill need
-        to add instructions for that. Unless you have sufficent graphics card
-        to try and train it on your machine.
-        
-        Step one. Pick multiple files from a single game.
-        Step Two. Batch Convert images and create a running numpy object(3d) of
-        2d arrays. Save That and the controller input(label) as Input:label for
-        your dataset.
-        Step Three. Split the dataset into 3 different single object python
-        dictionaries, which are Input:label for Train, test, and verifcation.
-        Step Four. Verify the shit out of previous steps and create and save a
-        model with a single optimization.
-        Step Five. Training a dataset is a matter of running through every
-        image in the training set and optimizing the necessary weights and
-        balances for the model to correctly give a label to an image.
+Tensorflow Model Creation and Training SOFTWARE:
+    
+    Step 1 - Choose a Dataset.
+    
+    Step 2 -
+
 """.format(VERSION,)
         
 class OUTTFSHIT_HERE(object):
