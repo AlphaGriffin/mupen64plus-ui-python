@@ -40,6 +40,7 @@ from m64py.frontend.plotter import Plotter
 from m64py.frontend.recorder import Recorder
 from m64py.frontend.trainer import Trainer
 from m64py.frontend.processing import Processing
+from m64py.frontend.player import Player
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -103,6 +104,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.recorder = Recorder(self, self.worker)
         self.trainer = Trainer(self, self.worker)
         self.processing = Processing(self, self.worker)
+        self.player = Player(self, self.worker)
 
     def closeEvent(self, event):
         self.worker.quit()
@@ -519,6 +521,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_actionProcessing_Console_triggered(self):
         """Shows ML_Training dialog."""
         self.processing.show()
+    
+    @pyqtSlot()
+    def on_actionPlayer_Console_triggered(self):
+        """Shows ML_Player dialog."""
+        self.player.show()
         
     @pyqtSlot()
     def on_actionAGAbout_triggered(self):

@@ -1,4 +1,5 @@
 *.pyc
+*.swp
 /src/m64py/ui/*.py
 
 /build

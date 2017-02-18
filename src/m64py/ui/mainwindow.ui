@@ -164,6 +164,7 @@
     <addaction name="actionRecording_Console"/>
     <addaction name="actionProcessing_Console"/>
     <addaction name="actionTraining_Console"/>
+    <addaction name="actionPlayer_Console"/>
     <addaction name="separator"/>
     <addaction name="actionAGAbout"/>
    </widget>
@@ -688,6 +689,11 @@ QStatusBar { margin:0px; }</string>
   <action name="actionProcessing_Console">
    <property name="text">
     <string>Processing Console</string>
+   </property>
+  </action>
+  <action name="actionPlayer_Console">
+   <property name="text">
+    <string>Player Console</string>
    </property>
   </action>
  </widget>
