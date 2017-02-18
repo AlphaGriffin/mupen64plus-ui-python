@@ -17,6 +17,7 @@
 
 from PyQt5.QtWidgets import QDialog
 from m64py.ui.agblank_ui import Ui_AGBlank
+from PyQt5.QtGui import QTextCursor
 
 # Abstract class for the record/playback interfaces
 #

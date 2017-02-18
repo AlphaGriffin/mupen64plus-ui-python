@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import pyqtSlot#, QTimer
 from PyQt5.QtWidgets import QAbstractItemView
 import os, sys#, time, shutil
