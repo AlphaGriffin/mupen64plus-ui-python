@@ -23,8 +23,8 @@ import os, sys#, time, shutil
 #import pandas as pd
 import numpy as np
 
-import lib.build_network as net         # Plug all the data into Tensorflow... very carefully...
-import lib.process_network as proc      # Actually run the TF machine
+#import lib.build_network as net         # Plug all the data into Tensorflow... very carefully...
+#import lib.process_network as proc      # Actually run the TF machine
 
 
 #from PIL import Image

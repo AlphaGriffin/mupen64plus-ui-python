@@ -62,8 +62,8 @@ class Prepare(object):
         pil_image = Image.open(img)# open img
         x = pil_image.resize((200, 66), Image.ANTIALIAS) # resizes image in-place
         numpy_img = np.array(x)         # convert to numpy 
-        grey_numpy_image = self.make_BW(numpy_img)
-        return grey_numpy_image
+        #grey_numpy_image = self.make_BW(numpy_img)
+        return numpy_img
         
     def gamepadImageMatcher(self, path):
         #INFO = "SAW -- matches gamepad csv data rows to images based on timestamps\nReturns two matching arrays"
