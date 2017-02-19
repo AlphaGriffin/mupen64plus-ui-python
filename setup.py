@@ -368,8 +368,8 @@ cmdclass = {
 setup(
     name = "m64py",
     version = FRONTEND_VERSION,
-    description = "M64Py - A frontend for Mupen64Plus",
-    long_description = "M64Py is a Qt5 front-end (GUI) for Mupen64Plus, a cross-platform plugin-based Nintendo 64 emulator.",
+    description = "M64Py Alpha Griffin Edition - A frontend with machine learning for Mupen64Plus",
+    long_description = "M64Py AGE is a Qt5 front-end (GUI) with machine learning for Mupen64Plus, a cross-platform plugin-based Nintendo 64 emulator.",
     author = "Milan Nikolic",
     author_email = "gen2brain@gmail.com",
     license = "GNU GPLv3",
@@ -377,7 +377,7 @@ setup(
     packages = ["m64py", "m64py.core", "m64py.frontend", "m64py.ui"],
     package_dir = {"": "src"},
     scripts = ["m64py"],
-    requires = ["PyQt5", "PySDL2"],
+    requires = ["PyQt5", "PySDL2", "aglog"],
     platforms = ["Linux", "Windows", "Darwin"],
     cmdclass = cmdclass,
     data_files = [
