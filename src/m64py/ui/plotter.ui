@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>AG Plotter</string>
+   <string>AG Joystick Plotter</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2">
    <item>

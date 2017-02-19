@@ -667,7 +667,7 @@ QStatusBar { margin:0px; }</string>
   </action>
   <action name="actionPad_Graph">
    <property name="text">
-    <string>&amp;Pad Graph</string>
+    <string>&amp;Joystick Input Graph</string>
    </property>
   </action>
   <action name="actionRecording_Console">

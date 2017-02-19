@@ -101,12 +101,6 @@ class Recorder(AGBlank):
         
 
     """ EASY GOOD WORKING FUNC's """
-    def print_console(self, msg): 
-        """Takes a String and prints to console"""
-        self.console.moveCursor(QTextCursor.End)
-        self.console.insertPlainText("{}\n".format(msg))
-        #print(msg)
-        
     def set_save_dir(self):
         """Sets the Input Field text"""
         #print ("in set_save_dir()")
@@ -302,17 +296,18 @@ class Recorder(AGBlank):
     def stop(self):
         #autoshots
         """This ends the recording session and buttons up the screenshot dir"""
-        self.poll_time.stop()
-        self.worker.toggle_autoshots()
-        self.actionButton.setText('Record')
-        
-        elapsed = time.time()*1000.0 - self.recordStartedAt
-        self.print_console("Recording took {} seconds".format(elapsed/1000.0))
-        self.recordStartedAt = None
-        
-        self.set_save_dir()
-        self.recording = False
-        self.get_images()
+        if self.recording:
+            self.poll_time.stop()
+            self.worker.toggle_autoshots()
+            self.actionButton.setText('Record')
+            
+            elapsed = time.time()*1000.0 - self.recordStartedAt
+            self.print_console("Recording took {} seconds".format(elapsed/1000.0))
+            self.recordStartedAt = None
+            
+            self.set_save_dir()
+            self.recording = False
+            self.get_images()
         
         
         

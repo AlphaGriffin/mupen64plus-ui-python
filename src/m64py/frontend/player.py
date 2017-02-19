@@ -25,6 +25,8 @@ import numpy as np
 #import lib.build_network as net         # Plug all the data into Tensorflow... very carefully...
 #import lib.process_network as proc      # Actually run the TF machine
 
+import ag.logging as log
+
 
 #from PIL import Image
 VERSION = sys.version
@@ -73,8 +75,8 @@ class Player(AGBlank):
         """Show this window"""
         super().show()
 
-        if not self.selector.getEnabled():
-            populateSelector()
+        if not self.selector.isEnabled():
+            self.populateSelector()
             self.selector.setEnabled(True)
 
         
@@ -85,10 +87,23 @@ class Player(AGBlank):
 
     def populateSelector(self, folder=""):
         """This populates the model list"""
+        log.debug("populateSelector()")
         self.selector.clear()
 
-        for model in os.listdir(self.work_dir):
-            self.selector.addItem(model)
+        log.debug("about to list files: {}".format(self.work_dir))
+        try:
+            files = os.listdir(self.work_dir)
+            log.debug("files: {}".format(files))
+
+            if files:
+                for model in files:
+                    self.selector.addItem(model)
+            else:
+                self.print_console("No models found: {}".format(self.work_dir))
+        except FileNotFoundError:
+            msg = "model directory not found: {}".format(self.work_dir)
+            log.error(msg)
+            self.print_console(msg)
 
            
             
@@ -112,10 +127,12 @@ class Player(AGBlank):
          
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
+        log.debug("on_selector_itemSelectionChanged()")
         self.selected = None;
 
         selected = self.selector.selectedItems()
         if len(selected) is 1:
+            log.debug("got a selection")
             self.selected = selected[0].text();
             self.actionButton.setEnabled(True)
         

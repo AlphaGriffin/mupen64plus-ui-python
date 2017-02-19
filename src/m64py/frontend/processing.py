@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QAbstractItemView
 import os, sys
@@ -254,7 +253,12 @@ class Processing(AGBlank):
         """
         Creates a list of Games that have saves and resets the selected game.
         """
-        self.gamesList = os.listdir(self.work_dir)
+        try:
+            self.gamesList = os.listdir(self.work_dir)
+        except FileNotFoundError:
+            self.print_console("Source path does not exist: {}".format(self.work_dir))
+            return
+
         self.selector.setEnabled(True)
         self.selectingRom = True
         self.actionButton.setEnabled(False)
@@ -289,12 +293,6 @@ class Processing(AGBlank):
         # click on the button!!!
         
     """ EASY GOOD WORKING FUNC's """
-    def print_console(self, msg): 
-        """Takes a String and prints to console"""
-        self.console.moveCursor(QTextCursor.End)
-        self.console.insertPlainText("{}\n".format(msg))
-        #print(msg)
-        
     def setWorker(self, worker):
         """Get Worker(ref) from main code and check the local Userdata folder"""
         self.worker = worker

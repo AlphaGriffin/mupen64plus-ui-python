@@ -99,14 +99,14 @@
        <item>
         <widget class="QLabel" name="erock">
          <property name="text">
-          <string>Eric Petersen</string>
+          <string>Eric Petersen (ruckusist)</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QLabel" name="saw">
          <property name="text">
-          <string>Shawn A. Wilson</string>
+          <string>Shawn A. Wilson (lannocc)</string>
          </property>
         </widget>
        </item>

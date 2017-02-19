@@ -25,6 +25,8 @@ matplotlib.use("Qt5Agg")
 from PyQt5 import QtCore
 import pygame
 
+import ag.logging as log
+
 class xpad(object):
     """Example pygame controller read"""
     def __init__(self,options=None):
@@ -34,8 +36,12 @@ class xpad(object):
             self.joystick.init()
         except:
             print('unable to connect to Xbox Controller')
+            self.joystick = None
             
     def read(self):
+        if not self.joystick:
+            return None
+
         pygame.event.pump()
         
         # left stick
@@ -67,6 +73,7 @@ class paddle_graph(FigureCanvas):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         FigureCanvas.__init__(self, self.fig)
         self.controller = xpad()
+        log.debug("controller: {}".format(self.controller))
         self.setParent(parent)
         layout.addWidget(self)
         self.setup_grapth()
@@ -95,18 +102,22 @@ class paddle_graph(FigureCanvas):
     def update_figure(self):
         """This is called by the Timer Function"""
         self.controller_data = self.controller.read()
-        self.plotData.append(self.controller_data) # adds to the end of the list
-        self.plotData.pop(0) # remove the first item in the list, ie the oldest
-        
-        x = np.asarray(self.plotData)
-        self.axes.plot(range(0,self.plotMem), x[:,0], 'r')
-        self.axes.hold(True)
-        self.axes.plot(range(0,self.plotMem), x[:,1], 'b')
-        self.axes.plot(range(0,self.plotMem), x[:,2], 'g')
-        self.axes.plot(range(0,self.plotMem), x[:,3], 'k')
-        self.axes.plot(range(0,self.plotMem), x[:,4], 'y')
-        self.axes.hold(False)
-        self.draw()
+
+        if self.controller_data:
+            self.plotData.append(self.controller_data) # adds to the end of the list
+            self.plotData.pop(0) # remove the first item in the list, ie the oldest
+            
+            x = np.asarray(self.plotData)
+            self.axes.plot(range(0,self.plotMem), x[:,0], 'r')
+            self.axes.hold(True)
+            self.axes.plot(range(0,self.plotMem), x[:,1], 'b')
+            self.axes.plot(range(0,self.plotMem), x[:,2], 'g')
+            self.axes.plot(range(0,self.plotMem), x[:,3], 'k')
+            self.axes.plot(range(0,self.plotMem), x[:,4], 'y')
+            self.axes.hold(False)
+            self.draw()
+        else:
+            log.debug("no input to graph")
 
 class Plotter(QDialog, Ui_Plotter):
     """Construct from the .ui file"""
