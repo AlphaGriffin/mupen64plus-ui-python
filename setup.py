@@ -377,7 +377,7 @@ setup(
     packages = ["m64py", "m64py.core", "m64py.frontend", "m64py.ui"],
     package_dir = {"": "src"},
     scripts = ["m64py"],
-    requires = ["PyQt5", "PySDL2", "aglog"],
+    requires = ["PyQt5", "PySDL2", "matplotlib", "pandas", "pygame", "PIL", "aglog"],
     platforms = ["Linux", "Windows", "Darwin"],
     cmdclass = cmdclass,
     data_files = [

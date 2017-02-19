@@ -59,23 +59,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Constructor"""
         QMainWindow.__init__(self, None)
         self.setupUi(self)
+        self.menubar.setNativeMenuBar(False)
         self.opts, self.args = optparse
 
         logview.setParent(self)
         logview.setWindowFlags(Qt.Dialog)
-        #plotter = Plotter()
-#        plotter.setParent(self)
-#        plotter.setWindowFlags(Qt.Dialog)
-#        recorder.setParent(self)
-#        recorder.setWindowFlags(Qt.Dialog)
-        
-        
 
         self.statusbar_label = QLabel()
         self.statusbar_label.setIndent(2)
         self.statusbar_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self.statusbar.addPermanentWidget(self.statusbar_label, 1)
-        self.update_status(self.tr("Welcome to M64Py version {}".format(FRONTEND_VERSION)))
+        self.update_status(self.tr("Welcome to M64Py version {} Alpha Griffin Edition".format(FRONTEND_VERSION)))
 
         self.sizes = {
             SIZE_1X: self.action1X,
@@ -96,7 +90,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.create_widgets()
         self.recent_files = RecentFiles(self)
         self.connect_signals()
-        self.worker.init()     
+        if not self.worker.init():
+            raise Exception("Core/worker init failure. See other messages for details.")
         
         # Alpha Griffin Edition additions...
         self.agabout = AGAbout(self)

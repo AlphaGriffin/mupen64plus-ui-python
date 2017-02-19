@@ -59,9 +59,11 @@ class Worker(QThread):
             self.parent.settings.core = self.core
             if self.parent.args:
                 self.parent.file_open.emit(self.parent.args[0], None)
+            return True
         else:
             self.parent.state_changed.emit((False, False, False, False))
             self.parent.info_dialog.emit(self.tr("Mupen64Plus library not found."))
+            return False
 
     def quit(self):
         if self.state in [M64EMU_RUNNING, M64EMU_PAUSED]:
@@ -89,7 +91,8 @@ class Worker(QThread):
         else:
             self.library_path = self.settings.qset.value(
                 "Paths/Library", find_library(CORE_NAME))
-        self.core.core_load(str(self.library_path))
+            # note that on first run self.library_path could be None
+        self.core.core_load(self.library_path)
 
     def core_unload(self):
         """Unloads core library."""

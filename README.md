@@ -59,6 +59,10 @@ Additional dependencies are required for the Alpha Griffin Edition machine learn
 * [Matplotlib](http://matplotlib.org)
 * [CUDA](https://developer.nvidia.com/cuda-downloads) (recommended but not required)
 * [TensorFlow](https://www.tensorflow.org/install/)
+* [Pandas](http://pandas.pydata.org)
+* [Pygame](http://www.pygame.org)
+* [Pillow](https://python-pillow.org) (fork of Python Imaging Library)
+* [aglog](http://github.com/AlphaGriffin/logpy)
 
 Install
 -------
