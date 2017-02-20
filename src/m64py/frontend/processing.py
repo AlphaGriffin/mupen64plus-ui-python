@@ -22,62 +22,56 @@ import numpy as np
 from PIL import Image
 VERSION = sys.version
 
-# FIXME
 INTRO =\
 """
 CONVERSION SOFTWARE:
-        Select from multiple saves of a single game to create a dataset. This
-        dataset will need to be converted to a proper image size and coloring.
-        Then the dataset needs to be split into training, testing and 
-        validation sets. From there a model can be created with the use of a 
-        single opimization pass with random settings to create and save your 
-        model. At this point you can take your model and optimization function
-        to AWS and pay the 5 cents to run your model for an hour or 2. Ill need
-        to add instructions for that. Unless you have sufficent graphics card
-        to try and train it on your machine.
+        Select from multiple saves of a single game to create a dataset. This 
+        dataset will consist of 2 numpy objects (*.npy) in a new folder named 
+        by the title of the game, in a subdir of dataset in your Mupen64plus
+        save area.
         
-        Step one. Pick multiple files from a single game.
-        Step Two. Batch Convert images and create a running numpy object(3d) of
-        2d arrays. Save That and the controller input(label) as Input:label for
-        your dataset.
-        Step Three. Split the dataset into 3 different single object python
-        dictionaries, which are Input:label for Train, test, and verifcation.
-        Step Four. Verify the shit out of previous steps and create and save a
-        model with a single optimization.
-        Step Five. Training a dataset is a matter of running through every
-        image in the training set and optimizing the necessary weights and
-        balances for the model to correctly give a label to an image.
+        ** note: Make BW has been disabled. because BW would also have to be
+        implemented in playback. This adds an extra step and is left TODO at
+        release.
 """.format(VERSION,)
 
 class Prepare(object):
+    """ 
+    This will be used by both the Process and Playback Modules for conversion
+    of images for Tensorflow.
+    """
     def __init__(self,options=None):
         self.options = options
                 
     def make_BW(self,rgb):
+        """ This is the "rec601 luma" algorithm to compute 8-bit greyscale """
         return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
     
-    def prepare_image(self, img):
-        #print("DEBUGS  1 {}".format(img))
-        pil_image = Image.open(img)# open img
-        x = pil_image.resize((200, 66), Image.ANTIALIAS) # resizes image in-place
-        numpy_img = np.array(x)         # convert to numpy 
-        #grey_numpy_image = self.make_BW(numpy_img)
+    def prepare_image(self, img, makeBW=False):
+        """ This resizes the image to a tensorflowish size """
+        pil_image = Image.open(img)                       # open img
+        x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
+        numpy_img = np.array(x)                           # convert to numpy 
+        if makeBW:  
+            numpy_img = self.make_BW(numpy_img)           # grayscale
         return numpy_img
         
     def gamepadImageMatcher(self, path):
-        #INFO = "SAW -- matches gamepad csv data rows to images based on timestamps\nReturns two matching arrays"
-        
-        
+        """
+        - SAW - matches gamepad csv data rows to images based on timestamps
+        Params: A path with timestamped pictures and a ti1estamped .csv of
+                different lenghs.
+        Returns: two arrays of matched length img, labels.
+        """
+                
         # Open CSV for reading
         csv_path = os.path.join(path, "data.csv")
-        #print("about to open: {}".format(csv_path))
         csv_io = open(csv_path, 'r')
-        #print ("csv successfully opened")
         
         # Convert to a true array
         csv = []
         for line in csv_io:
-            # Split the string into array and trim off any whitespace/newlines in elements
+            # Split the string into array and trim off any whitespace/newlines
             csv.append([item.strip() for item in line.split(',')])
         if not csv:
             #print ("CSV HAS NO DATA")
@@ -85,14 +79,11 @@ class Prepare(object):
             
         # Get list of images in directory and sort it
         all_files = os.listdir(path)
-        #print ("all_files: {}".format(all_files))
-        #images = [image for image in all_files if any(image.endswith('.png'))]
         images = []
         for filename in all_files:
             if filename.endswith('.png'):
                 images.append(filename)
         images = sorted(images)
-        #print ("sorted images list: {}".format(images))
         
         if not images:
             #print ("FOUND NO IMAGES");
@@ -105,43 +96,32 @@ class Prepare(object):
         # Prime the pump (queue)...
         prev_line = csv.pop(0)
         prev_csvtime = int(prev_line[0])
-        #print ("line 0: {}".format(prev_line))
     
-        #prev_image = images[0]
-        #prev_imgtime = 0
-        # Find next matching image
         while images:
             imgfile = images[0]
-            #print ("imgfile: {}".format(imgfile))
             # Get image time:
-            #     Cut off the "gamename-" from the front and the ".png" from the end
+            #     Cut off the "gamename-" from the front and the ".png"
             hyphen = imgfile.rfind('-') # Get last index of '-'
             if hyphen < 0:
-                #print ("UNEXPECTED FILENAME, ABORTING: {}".format(imgfile))
                 break
             imgtime = int(imgfile[hyphen+1:-4]) # cut it out!
-            #print ("imgtime: {}".format(imgtime))
             lastKeptWasImage = False # Did we last keep an image, or a line?
             if imgtime > prev_csvtime:
-                #print ("keeping image: {}".format(imgtime))
                 keep_images.append(imgfile)
                 del images[0]
                 lastKeptWasImage = True
-                
                 
                 # We just kept an image, so we need to keep a
                 #corresponding input row too
                 while csv:
                     line = csv.pop(0)
-                    #print ("line: {}".format(line))
                     csvtime = int(line[0])
-                    #print ("csvtime: {}".format(str(csvtime)))
     
                     if csvtime >= imgtime:
                         # We overshot the input queue... ready to
                         # keep the previous data line
-                        #print ("keeping line: {}".format(prev_csvtime))
-                        keep_csv.append(prev_line[1:]) # truncate off the timestamp
+                        # truncate  the timestamp
+                        keep_csv.append(prev_line[1:]) 
                         lastKeptWasImage = False
     
                         prev_line = line
@@ -151,19 +131,13 @@ class Prepare(object):
                             break;
     
                     if not csv:
-                        #print ("OUT OF CSV DATA")
                         if lastKeptWasImage:
-                            #print ("keeping line: {}".format(prev_csvtime))
-                            keep_csv.append(prev_line[1:]) # truncate off the timestamp
+                            # truncate off the timestamp
+                            keep_csv.append(prev_line[1:]) 
                         break
     
             else:
-                #print ("dropping image: {}".format(imgtime))
                 del images[0]
-    
-        #print ("len(keep_data): {}".format(len(keep_csv)))
-        #print ("len(keep_images): {}".format(len(keep_images)))
-        #self.print_console("MATCHED RESULTS COUNT: {} <--> {}".format(len(keep_csv),len(keep_images)))
         return keep_csv, keep_images
 
         
@@ -217,13 +191,16 @@ class Processing(AGBlank):
         datasetIndex = len(os.listdir(saveDir))
         dataset_x = []
         dataset_y = []
-        datasetFilename_x = "_{}_dataset_{}_image.npy".format(self.currentGame,datasetIndex)
-        datasetFilename_y = "_{}_dataset_{}_label.npy".format(self.currentGame,datasetIndex)
+        datasetFilename_x = "_{}_dataset_{}_image.npy".format(
+                                            self.currentGame,datasetIndex)
+        datasetFilename_y = "_{}_dataset_{}_label.npy".format(
+                                            self.currentGame,datasetIndex)
         self.print_console("#############################################")
         self.print_console("# Processing Game folders to dataset")
         self.print_console("# Game Name: {}".format(self.currentGame))
         self.print_console("# Dataset Path: {}".format(saveDir))
-        self.print_console("# Number of saves to process: {}".format(len(folders)))
+        self.print_console("# Number of saves to process: {}".format(
+                           len(folders)))
         self.print_console("#############################################")
         
         # for each folder given...
@@ -235,7 +212,7 @@ class Processing(AGBlank):
             dataset_y.append(labels) # BOOM!
             self.print_console("# Step 2: Convert img to BW np array of (x,y)")
             for image in imgs:
-                img = proc.prepare_image(os.path.join(current_path,image)) # process the image
+                img = proc.prepare_image(os.path.join(current_path,image))
                 dataset_x.append(img)
         
         self.print_console("# Step 3: Save files...\n\t{}\n\t{}".format(
@@ -256,7 +233,8 @@ class Processing(AGBlank):
         try:
             self.gamesList = os.listdir(self.work_dir)
         except FileNotFoundError:
-            self.print_console("Source path does not exist: {}".format(self.work_dir))
+            self.print_console("Source path does not exist: {}".format(
+                               self.work_dir))
             return
 
         self.selector.setEnabled(True)
@@ -266,12 +244,18 @@ class Processing(AGBlank):
         self.build_selector()
         
     def selecterator(self):
+        """
+        Make sure the finiky QWidget List selector doesnt crash the system.
+        """
         selection = []
+        
+        # get self.selected from a global but this is a less good solution
         for x in self.selected:
             selection.append(x.text())
         select_string = ", ".join(x for x in selection)
         self.input.setText(select_string)
         self.selection = selection
+        
         # if we have picked a game
         if any(select_string in s for s in self.gamesList):
             self.currentGame = self.selected[0].text()
@@ -292,9 +276,8 @@ class Processing(AGBlank):
         self.actionButton.setEnabled(True)
         # click on the button!!!
         
-    """ EASY GOOD WORKING FUNC's """
     def setWorker(self, worker):
-        """Get Worker(ref) from main code and check the local Userdata folder"""
+        """Get Worker from main code and check the local Userdata folder"""
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.work_dir, "training")
@@ -311,11 +294,6 @@ class Processing(AGBlank):
                 self.selector.addItem("{}".format(i))
         """then we need to be selecting folders to process"""
                     
-            
-    ###
-    ###  These Slots are set in the UI designer and need to be reset here
-    ###
-    
     def show(self):
         """On Show this window"""
         super().show()
@@ -334,23 +312,14 @@ class Processing(AGBlank):
         """Test Button for pressing broken parts"""
         # reset and select game again...
         self.getSaves()
-        #self.print_console(self.selection)
          
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
         self.selected = self.selector.selectedItems()
-        #self.print_console(self.selected)
-        #for x in self.selected: self.print_console(x.text()) # good test!
-        
-        # protect deselect... for gods sake...
         if len(self.selected) > 0:
             self.selecterator()
             return
         self.actionButton.setEnabled(False)
         
     @pyqtSlot()
-    def closeEvent(self,event=False):
-        self.test = 0
-        #self.stop()
-        #super().closeEvent()
-        
+    def closeEvent(self,event=False): pass

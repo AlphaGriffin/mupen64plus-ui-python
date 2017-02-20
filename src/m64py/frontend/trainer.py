@@ -15,40 +15,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtCore import pyqtSlot#, QTimer
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QAbstractItemView
-import os, sys#, time, shutil
-#from glob import glob as check
-#import pandas as pd
+import os, sys
 import numpy as np
-
-#import lib.build_network as net         # Plug all the data into Tensorflow... very carefully...
-#import lib.process_network as proc      # Actually run the TF machine
-
-
-#from PIL import Image
 VERSION = sys.version
 
-# FIXME
 INTRO =\
 """
 Tensorflow Model Creation and Training SOFTWARE:
     
     Step 1 - Choose a Dataset.
     
-    Step 2 -
+    Step 2 - Click Train New Model. Visit AlphaGriffin.com for other ways and
+    tools to train models. Make sure to Train at least 1 iteration and save
+    the model. 
+    
+    Step 3  - Then either (1) Load and Optimize your existing model or 
+    (2) take the model to Alphagriffin.com or your own AWS for further
+    optimization.
 
-""".format(VERSION,)
-        
-class OUTTFSHIT_HERE(object):
-    def __init__(self): pass
+""".format(VERSION)
 
-    def BATCH_SHIT(self):pass
-
-    def DATASPLIT_SHIT(self): pass
-
-    def LOAD_NUMPY_DATASET(self): pass
-        
 class Trainer(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
@@ -59,8 +47,9 @@ class Trainer(AGBlank):
         self.inputLabel.setText('Working Directory(s):')
         self.actionButton.setText('Process')
         self.actionButton.setEnabled(False)
-        self.actionButton.setText('Game Select')
-        self.checkButton.setEnabled(True)
+        self.actionButton.setText('Train New Model')
+        self.checkButton.setEnabled(False)
+        self.checkButton.setText('Load/Optimize')
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
         
@@ -78,7 +67,7 @@ class Trainer(AGBlank):
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.root_dir = self.work_dir
-        self.work_dir = os.path.join(self.work_dir, "training")
+        self.work_dir = os.path.join(self.work_dir, "dataset")
         
         self.getSaves()
         
@@ -98,13 +87,16 @@ class Trainer(AGBlank):
         datasetIndex = len(os.listdir(saveDir))
         dataset_x = []
         dataset_y = []
-        datasetFilename_x = "_{}_dataset_{}_image.npy".format(self.currentGame,datasetIndex)
-        datasetFilename_y = "_{}_dataset_{}_label.npy".format(self.currentGame,datasetIndex)
+        datasetFilename_x = "_{}_dataset_{}_image.npy".format(
+                                            self.currentGame,datasetIndex)
+        datasetFilename_y = "_{}_dataset_{}_label.npy".format(
+                                            self.currentGame,datasetIndex)
         self.print_console("#############################################")
         self.print_console("# Processing Game folders to dataset")
         self.print_console("# Game Name: {}".format(self.currentGame))
         self.print_console("# Dataset Path: {}".format(saveDir))
-        self.print_console("# Number of saves to process: {}".format(len(folders)))
+        self.print_console("# Number of saves to process: {}".format(
+                           len(folders)))
         self.print_console("#############################################")
         
         # for each folder given...
@@ -122,7 +114,7 @@ class Trainer(AGBlank):
             self.print_console("# Step 2: Convert img to BW np array of (x,y)")
             for image in imgs:
                 self.print_console(os.path.join(current_path,image))
-                img = self.proc.prepare_image(os.path.join(current_path,image)) # process the image
+                img = self.proc.prepare_image(os.path.join(current_path,image))
                 dataset_x.append(img)
         
         self.print_console("# Step 3: Save files...\n\t{}\n\t{}".format(
@@ -143,7 +135,8 @@ class Trainer(AGBlank):
         try:
             self.gamesList = os.listdir(self.work_dir)
         except FileNotFoundError:
-            self.print_console("Source path does not exist: {}".format(self.work_dir))
+            self.print_console("Source path does not exist: {}".format(
+                               self.work_dir))
             return
 
         self.selector.setEnabled(True)
@@ -153,12 +146,18 @@ class Trainer(AGBlank):
         self.build_selector()
         
     def selecterator(self):
+        """
+        Make sure the finiky QWidget List selector doesnt crash the system.
+        """
         selection = []
+        
+        # get self.selected from a global but this is a less good solution
         for x in self.selected:
             selection.append(x.text())
         select_string = ", ".join(x for x in selection)
-        self.print_console(select_string)
+        self.input.setText(select_string)
         self.selection = selection
+        
         # if we have picked a game
         if any(select_string in s for s in self.gamesList):
             self.currentGame = self.selected[0].text()
@@ -179,9 +178,8 @@ class Trainer(AGBlank):
         self.actionButton.setEnabled(True)
         # click on the button!!!
         
-    """ EASY GOOD WORKING FUNC's """
     def setWorker(self, worker):
-        """Get Worker(ref) from main code and check the local Userdata folder"""
+        """Get Worker from main code and check the local Userdata folder"""
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.work_dir, "training")
@@ -197,11 +195,6 @@ class Trainer(AGBlank):
             for i in self.gamesList:
                 self.selector.addItem("{}".format(i))
         """then we need to be selecting folders to process"""
-                    
-            
-    ###
-    ###  These Slots are set in the UI designer and need to be reset here
-    ###
     
     def show(self):
         """On Show this window"""
@@ -214,32 +207,20 @@ class Trainer(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Process the files"""
-        self.test = 0
-        #self.processing_()
+        pass
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        # reset and select game again...
-        self.test = 0
-        #self.getSaves()
-        #self.print_console(self.selection)
+        pass
          
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
         self.selected = self.selector.selectedItems()
-        self.print_console(self.selected)
-        for x in self.selected: self.print_console(x.text()) # good test!
-        
-        # protect deselect... for gods sake...
-        #if len(self.selected) > 0:
-        #    self.selecterator()
-        #    return
-        #self.actionButton.setEnabled(False)
+        if len(self.selected) > 0:
+            self.selecterator()
+            return
+        self.actionButton.setEnabled(False)
         
     @pyqtSlot()
-    def closeEvent(self,event=False):
-        self.test = 0
-        #self.stop()
-        #super().closeEvent()
-        
+    def closeEvent(self,event=False): pass

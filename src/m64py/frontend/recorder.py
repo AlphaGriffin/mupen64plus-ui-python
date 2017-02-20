@@ -15,11 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import pyqtSlot, QTimer
 import os, sys, pygame, time, shutil
-from glob import glob as check
-import pandas as pd
 VERSION = sys.version
 
 # FIXME
@@ -28,16 +25,17 @@ INTRO =\
 Recording Console by: AlphaGriffin.com
 Built in python 3.5.2
 You are running: {0:2}
-Step 1: Start a Game and Pause it.
-Step 2: Press the Check Button and Get the Game Creds
-Step 3: Choose New Game and Press record
-step 4: Play just 1 round of your game, pause it, then come back and stop your recording.
-Notes:
-    Dont X close this window while its record... it will save proper, but crash out.
-""".format(VERSION,)
+Step 1: Start a ROM and get past the menus and into the game and pause it.
+Step 2: Press record and go on to enjoy your game.
+Step 3: When you exit out of the game the Recording will automatically stop.
+Or if you are racing, you can stop the recording between races and just click
+record again and keep playing. The more you contribute to the dataset, the
+better you can train your model.
+step 4: Move on to the Processing Console.
+""".format(VERSION)
 
-# FIXME ADD NOTATION FOR THIS
 class xpad(object):
+    """ This conversion comes from the orginal TKart Demo """
     def __init__(self,options=None):
         try:
             pygame.init()
@@ -45,16 +43,21 @@ class xpad(object):
             self.joystick.init()
         except:
             print('unable to connect to Xbox Controller')
+            
     def read(self):
+        """ This is the call polled for the xpad data """
         pygame.event.pump()
         L_x_axis = self.joystick.get_axis(0)
         L_y_axis = self.joystick.get_axis(1)
         a_btn = self.joystick.get_button(1)
         b_btn = self.joystick.get_button(2)
+        
         # top buttons
         rb = self.joystick.get_button(5)
         return [L_x_axis, L_y_axis, a_btn, b_btn, rb]
+        
     def manual_override(self):
+        """ This takes over from the AI, allows for better 2nd Gen Training """
         pygame.event.pump()
         return self.joystick.get_button(4) == 1
         
@@ -64,9 +67,9 @@ class Recorder(AGBlank):
     def __init__(self, parent, worker):
         # init
         super().__init__(parent)
-        self.setWorker(worker)
-#        QDialog.__init__(self, parent)
-        self.pad = xpad()
+        self.setWorker(worker)   # get this from MUPEN core
+        self.pad = xpad()        # get a controller instance
+        
         # set up the blanks
         self.setWindowTitle('AG Recorder')
         self.selectorLabel.setText('Existing Save Folders:')
@@ -76,39 +79,32 @@ class Recorder(AGBlank):
         self.checkButton.setEnabled(False)
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
+        
         # timer state
         self.runningTimer = False
+        
         # booleans are good
-        self.recording = False # are we recording?
-        self.recordStartedAt = None # when did the recording start?
-        self.game_on = False   # is there a game runnning?
+        self.recording = False       # are we recording?
+        self.recordStartedAt = None  # when did the recording start?
+        self.game_on = False         # is there a game runnning?
+        
         # preset some globals
         self.selectedSaveName = None
         self.path = ""
-        
-        # setWorker() above already sets self.work_dir
-        #self.work_dir = "/tmp"
-        
         self.check_game_name = ""
+        
         # startup
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
-        
-        # Defer startup timers, etc. until after we actually need something to
-        # happen, i.e. when the dialog is actually shown.
-        #self.startup()
-        
-        
+              
 
-    """ EASY GOOD WORKING FUNC's """
     def set_save_dir(self):
         """Sets the Input Field text"""
-        #print ("in set_save_dir()")
-        # Adding a new subfolder for "TRAINING" 
         name = self.getGame()
         name_path = os.path.join(self.work_dir, "training", name)
         if not os.path.isdir(name_path):
-            print ("path does not exist, creating it now: {}".format(name_path))
+            print ("path does not exist, creating it now: {}".format(
+                   name_path))
             os.makedirs(name_path)
         self.print_console("Good Choice with {}, Good luck!".format(name))
         
@@ -128,9 +124,9 @@ class Recorder(AGBlank):
         self.selector.addItem("Record a New Game")
         
     def save_data(self,test=False):
-        """Create and populate a data.csv which is the paddle controls and index and timestamp"""
-        # screen shots go to a preset place
-        #self.worker.save_screenshot() # works good getting every 10th is frame...
+        """
+        Create data.csv - Timestamp, { 0.0, 0.0, 0, 0, 0 }
+        """
         paddle_read = self.pad.read()
         stamp = int(time.time() * 1000)
         y = ("{}:\t{}".format(stamp,paddle_read))
@@ -139,13 +135,15 @@ class Recorder(AGBlank):
             outfileName = os.path.join(self.save_name, 'data.csv')
             print("".format(outfileName))
             outfile = open(outfileName, 'a')
+            
             # write line
-            outfile.write('{},{}\n'.format(stamp, ','.join(map(str, paddle_read))))
+            outfile.write('{},{}\n'.format(stamp, ','.join(
+                          map(str, paddle_read))))
             outfile.close()
         self.print_console(y)
         
     def setWorker(self, worker):
-        """Get Worker(ref) from main code and check the local Userdata folder"""
+        """Get Worker from main code and check the local Userdata folder"""
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         
@@ -155,27 +153,7 @@ class Recorder(AGBlank):
         if x is not "":
             return x
         return "no_game"
-    
-    # DEPRICATED!
-    def selector_change(self):
-        """this reads the selector selection and acts on it."""
-        #self.set_save_dir()
-        #self.check_tail(self.selectedSaveName)
-        pass
-     
-    # DEPRICATED!
-    def check_tail(self, path):
-        """Read and print from the CSV file if it exists"""
-        x = '{}/{}/data.csv'.format(self.work_dir,path)
-        if check(x):
-            df = pd.read_csv(x)
-            top = df.head(5)
-            bottom = df.tail(10)
-            concatenated = pd.concat([top,bottom])
-            self.print_console("This looks like an Unprocessed Folder\n{}\nRecord in another Dir".format(concatenated))
-        else:
-            self.print_console("file!=\t{}\nNo Previous Save in this Directory\n\tGame ON!".format(x))
-                 
+               
     def startupTimer(self):
         """Start a timer if none is running and keep checking back"""
         # start game checker
@@ -194,14 +172,10 @@ class Recorder(AGBlank):
             
     def check_game(self):
         """Check mupen worker and see if hes working, called by runningTimer"""
-        #x = self.worker.core_state_query(1)
         wasloaded = self.game_on
         self.worker.core_state_query(1)
         loaded = self.worker.state in [2, 3]
         self.game_on = loaded
-            
-        #self.selector.setEnabled(loaded)
-        #self.input.setEnabled(loaded)
         
         if not loaded:
             if wasloaded:
@@ -211,71 +185,7 @@ class Recorder(AGBlank):
         
         if not wasloaded:
             if loaded:
-                self.set_save_dir()
-        
-        # Leave the timer running... it will keep watching the emulator status for us
-                
-        #if loaded:
-        #    self.startupTimer.stop()
-        #    self.startupTimer = False
-        #    self.set_save_dir()
-    
-    """
-    Test functions 
-    """         
-    """
-    def show(self):
-        self.refresh()
-        super().show()
-    def populate_selector(self):
-        self.selector.clear()
-        self.work_dir = self.worker.core.config.get_path("UserData")
-        print ("work_dir: {}".format(self.work_dir))
-        self.check_game_name = self.worker.core.rom_header.Name.decode().replace(" ", "_").lower()
-        print ("check_game_name: {}".format(self.check_game_name))
-        path = self.work_dir + "/" + self.check_game_name
-        print ("path: {}".format(path))
-    def update_(self):
-        ###This is the timer driven function for saving data to the csv file and capturing images
-        x = self.pad.read()
-        stamp = int(time.time() * 1000)
-        y = ("{}:\t{}".format(stamp,x))
-        self.print_console(y)
-        
-    def check_worker(self): 
-        self.work_dir = self.worker.core.config.get_path("UserData")
-        self.check_game_name = self.worker.core.rom_header.Name.decode().replace(" ", "_").lower()
-        d = os.listdir(self.work_dir)
-        self.populate_selector(d)
-    def refresh(self, skipItem=None):
-        print ("refreshing state")
-        loaded = False
-        self.worker.core_state_query(1)
-        loaded = self.worker.state in [2, 3]
-        print ("game loaded: {}".format(loaded))
-        sitems = self.selector.selectedItems()
-        print ("sitems: {}".format(sitems))
-        selected = loaded and sitems is not None and len(sitems) > 0
-        print ("selected: {}".format(selected))
-        
-        self.input.setEnabled(selected)
-        self.actionButton.setEnabled(selected)
-        if skipItem is not self.selector: self.selector.setEnabled(loaded) 
-        
-        if loaded and skipItem is not self.selector:
-            print ("populating...")
-            self.populate_selector()
-        
-    
-    def Check_game_stats(self):
-        self.worker.core_state_query(M64CORE_EMU_STATE)
-        if self.worker.state in [M64EMU_RUNNING, M64EMU_PAUSED]:
-            self.check_worker()
-        if self.check_game_name is not "":
-            self.work_dir = os.path.join(self.work_dir,self.check_game_name)
-        self.print_console(self.work_dir)
-    """ 
-        
+                self.set_save_dir()       
     
         
     def record(self):
@@ -294,7 +204,6 @@ class Recorder(AGBlank):
         self.recordStartedAt = time.time()*1000.0
         
     def stop(self):
-        #autoshots
         """This ends the recording session and buttons up the screenshot dir"""
         if self.recording:
             self.poll_time.stop()
@@ -308,8 +217,6 @@ class Recorder(AGBlank):
             self.set_save_dir()
             self.recording = False
             self.get_images()
-        
-        
         
     def get_images(self):
         """This moves all the screenshots to the current save_dir"""
@@ -331,12 +238,6 @@ class Recorder(AGBlank):
             
             self.print_console("Got {} images, moved to {}".format(len(y),self.save_name))
             
-            #
-            # SAW - this is where gamepadImageMatcher stuff happened
-            # (now in tf_utils/trainutils.py)
-            # ruckusist - now in training.py
-            #
-            
         else:
             self.checkButton.setEnabled(True)
             self.print_console("No ScreenShots Saved")
@@ -345,17 +246,16 @@ class Recorder(AGBlank):
             
             
     def show(self):
+        """ default show command """
         self.startupTimer()
         super().show()
         
     def hide(self):
+        """ This stops recording on game close """
         self.shutdownTimer()
         self.stop()
         super().hide()
 
-    ###
-    ###  These Slots are set in the UI designer and need to be reset here
-    ###
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Start - Stop record button"""
@@ -366,16 +266,9 @@ class Recorder(AGBlank):
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
         self.get_images()
-    
-    # This does not happen in the RECODING CONSOLE anymore        
+     
     @pyqtSlot()
-    def on_selector_itemSelectionChanged(self):
-        self.selected = self.selector.selectedItems()
-        self.selector_change()
+    def on_selector_itemSelectionChanged(self): pass
         
     @pyqtSlot()
-    def closeEvent(self,event=False):
-        self.test = 0
-        #if self.recording:
-        #    self.stop()
-        #super().closeEvent()
+    def closeEvent(self,event=False): pass

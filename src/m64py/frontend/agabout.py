@@ -32,6 +32,3 @@ class AGAbout(QDialog, Ui_AGAbout):
     def on_website_clicked(self):
         """Open web browser to AlphaGriffin.com."""
         webbrowser.open('http://alphagriffin.com')
-
-#agabout = AGAbout()
-
