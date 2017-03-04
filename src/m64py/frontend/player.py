@@ -17,7 +17,7 @@
 from m64py.frontend.agblank import AGBlank
 from PyQt5.QtCore import pyqtSlot, QThread#, QTimer
 from PyQt5.QtWidgets import QAbstractItemView
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import os, sys#, time, shutil
 #from glob import glob as check
 import numpy as np
@@ -36,7 +36,6 @@ ARTIFICIAL PLAYER:
 """.format(VERSION,)
 
 
-cla
 class webServer(BaseHTTPRequestHandler):
     def __init__(self):
         self.response_message = []
@@ -63,7 +62,7 @@ class webServer(BaseHTTPRequestHandler):
         self.wfile.write(output)  # this is the output to http here
         return message
 
-ss AThread(QThread):
+class AThread(QThread):
 
     def set_server(self, server):
         self.server = server
@@ -74,10 +73,11 @@ ss AThread(QThread):
 
 class Play(object):
 
-    def __init__(self, options):
-        self.options = options
+    def __init__(self):
+        #self.options = options
         # need some pathy kind of stuff here
-        self.save_path = self.options.save_dir + '_best_validation_1_'
+        #self.save_path = self.options.save_dir + '_best_validation_1_'
+        x=0
 
     def load_graph(self, session):
         session = tf.Session
@@ -116,7 +116,7 @@ class Player(AGBlank):
         self.setWindowTitle('AG Player')
         self.print_console("AlphaGriffin.com - AI Player")
         # AI machine player
-        self.ai_player = Play(self.options)  # SHIT... where are the options?
+        self.ai_player = Play()  # SHIT... where are the options?
         # AI will communicate with game through a WEBSERVER
         self.server_thread = AThread(parent=self)
         # model selector (don't populate it until window is actually shown)
