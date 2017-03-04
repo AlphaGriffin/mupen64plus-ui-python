@@ -23,6 +23,8 @@ import os, sys, time #, shutil
 import numpy as np
 import tensorflow as tf
 from PIL import Image
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
 import ag.logging as log
 import m64py.tf.model
@@ -297,18 +299,30 @@ class TensorPlay(object):
     def dequeue_image(self):
         """Find next autoshot image, load and return it while removing it from disk"""
 
-        for file in os.listdir(self.autoshots):
+        images = os.listdir(self.autoshots)
+        if images:
+            file = images[0]
             log.debug("found file: {}".format(file))
             
             # load image into memory (performing minor processing) and remove from disk
-            img = self.prepare_image(file)
-            os.remove(file)
+            img = self.prepare_image(os.path.join(self.autoshots, file))
+
+            #log.debug("removing image")
+            #os.remove(file)
 
     def prepare_image(self, img, makeBW=False):
         """ This resizes the image to a tensorflowish size """
+        log.debug("prepare_image: {}".format(img))
         pil_image = Image.open(img)                       # open img
-        x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
+        log.debug("pil_image: {}".format(pil_image))
+        try:
+            x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
+        except Exception as e:
+            log.fatal("Exception: {}".format(e))
+
+        log.debug("x: {}".format(x))
         numpy_img = np.array(x)                           # convert to numpy
+        log.debug("numpy_img: {}".format(numpy_img))
         # if makeBW:
         #    numpy_img = self.make_BW(numpy_img)           # grayscale
         return numpy_img
