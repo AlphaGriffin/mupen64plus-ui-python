@@ -16,13 +16,15 @@
 
 from m64py.frontend.agblank import AGBlank
 from mupen64.tf.mupen import mupenDataset as data
-from PyQt5.QtCore import pyqtSlot
+import mupen64.tf.model as model
+from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 from glob import glob
 import os, sys
 import numpy as np
-VERSION = sys.version
-
+import tensorflow as tf
+pyVERSION = sys.version
+tfVERSION = tf.__version__
 INTRO =\
 """
 Tensorflow Model Creation and Training SOFTWARE:
@@ -39,210 +41,18 @@ Tensorflow Model Creation and Training SOFTWARE:
 
 
 """.format(VERSION)
-class _MODEL_():
-    IMG_W = 200
-    IMG_H = 66
-    OUT_SHAPE = 5
 
-    def weight_variable(shape):
-      initial = tf.truncated_normal(shape, stddev=0.1)
-      return tf.Variable(initial)
+class ServerThread(QThread):
+    """Thread for running the web server"""
 
-    def bias_variable(shape):
-      initial = tf.constant(0.1, shape=shape)
-      return tf.Variable(initial)
+    def set_server(self, server):
+        self.server = server
 
-    def conv2d(x, W, stride):
-      return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='VALID')
+    def run(self):
+        self.server.serve_forver()
 
-    x = tf.placeholder(tf.float32, shape=[None, IMG_H, IMG_W, 3])
-    y_ = tf.placeholder(tf.float32, shape=[None, OUT_SHAPE])
-
-    x_image = x
-
-    #first convolutional layer
-    W_conv1 = weight_variable([5, 5, 3, 24])
-    b_conv1 = bias_variable([24])
-
-    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1, 2) + b_conv1)
-
-    #second convolutional layer
-    W_conv2 = weight_variable([5, 5, 24, 36])
-    b_conv2 = bias_variable([36])
-
-    h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2, 2) + b_conv2)
-
-    #third convolutional layer
-    W_conv3 = weight_variable([5, 5, 36, 48])
-    b_conv3 = bias_variable([48])
-
-    h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, 2) + b_conv3)
-
-    #fourth convolutional layer
-    W_conv4 = weight_variable([3, 3, 48, 64])
-    b_conv4 = bias_variable([64])
-
-    h_conv4 = tf.nn.relu(conv2d(h_conv3, W_conv4, 1) + b_conv4)
-
-    #fifth convolutional layer
-    W_conv5 = weight_variable([3, 3, 64, 64])
-    b_conv5 = bias_variable([64])
-
-    h_conv5 = tf.nn.relu(conv2d(h_conv4, W_conv5, 1) + b_conv5)
-
-    #FCL 1
-    W_fc1 = weight_variable([1152, 1164])
-    b_fc1 = bias_variable([1164])
-
-    h_conv5_flat = tf.reshape(h_conv5, [-1, 1152])
-    h_fc1 = tf.nn.relu(tf.matmul(h_conv5_flat, W_fc1) + b_fc1)
-
-    keep_prob = tf.placeholder(tf.float32)
-    h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
-
-    #FCL 2
-    W_fc2 = weight_variable([1164, 100])
-    b_fc2 = bias_variable([100])
-
-    h_fc2 = tf.nn.relu(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
-
-    h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
-
-    #FCL 3
-    W_fc3 = weight_variable([100, 50])
-    b_fc3 = bias_variable([50])
-
-    h_fc3 = tf.nn.relu(tf.matmul(h_fc2_drop, W_fc3) + b_fc3)
-
-    h_fc3_drop = tf.nn.dropout(h_fc3, keep_prob)
-
-    #FCL 3
-    W_fc4 = weight_variable([50, 10])
-    b_fc4 = bias_variable([10])
-
-    h_fc4 = tf.nn.relu(tf.matmul(h_fc3_drop, W_fc4) + b_fc4)
-
-    h_fc4_drop = tf.nn.dropout(h_fc4, keep_prob)
-
-    #Output
-    W_fc5 = weight_variable([10, OUT_SHAPE])
-    b_fc5 = bias_variable([OUT_SHAPE])
-
-    y = tf.matmul(h_fc4_drop, W_fc5) + b_fc5
-
-
-class model____(object):
-    def __init__(self, images, labels):
-        """
-        this will begin the model building process
-        """
-        import tensorflow as tf
-        self.tf = tf
-        self.IMG_W = 200
-        self.IMG_H = 66
-        self.OUT_SHAPE = 5
-        self.build_network()
-        self.msg = "Model Prepared = True"
-
-    def weight_variable(self, shape):
-        initial = tf.truncated_normal(shape, stddev=0.1)
-        return tf.Variable(initial)
-
-    def bias_variable(self, shape):
-        initial = tf.constant(0.1, shape=shape)
-        return tf.Variable(initial)
-
-    def conv2d(self, x, W, stride):
-        return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='VALID')
-
-    def build_network(self):
-        self.x = x = tf.placeholder(tf.float32, shape=[None, self.IMG_H, self.IMG_W, 3])
-        self.y_ = y_ = tf.placeholder(tf.float32, shape=[None, self.OUT_SHAPE])
-
-        x_image = x
-
-        #first convolutional layer
-        W_conv1 = self.weight_variable([5, 5, 3, 24])
-        b_conv1 = self.bias_variable([24])
-
-        h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1, 2) + b_conv1)
-
-        #second convolutional layer
-        W_conv2 = self.weight_variable([5, 5, 24, 36])
-        b_conv2 = self.bias_variable([36])
-
-        h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2, 2) + b_conv2)
-
-        #third convolutional layer
-        W_conv3 = self.weight_variable([5, 5, 36, 48])
-        b_conv3 = self.bias_variable([48])
-
-        h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, 2) + b_conv3)
-
-        #fourth convolutional layer
-        W_conv4 = self.weight_variable([3, 3, 48, 64])
-        b_conv4 = self.bias_variable([64])
-
-        h_conv4 = tf.nn.relu(conv2d(h_conv3, W_conv4, 1) + b_conv4)
-
-        #fifth convolutional layer
-        W_conv5 = self.weight_variable([3, 3, 64, 64])
-        b_conv5 = self.bias_variable([64])
-
-        h_conv5 = tf.nn.relu(conv2d(h_conv4, W_conv5, 1) + b_conv5)
-
-        #FCL 1
-        W_fc1 = self.weight_variable([1152, 1164])
-        b_fc1 = self.bias_variable([1164])
-
-        h_conv5_flat = tf.reshape(h_conv5, [-1, 1152])
-        h_fc1 = tf.nn.relu(tf.matmul(h_conv5_flat, W_fc1) + b_fc1)
-
-        self.keep_prob = keep_prob = tf.placeholder(tf.float32)
-        h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
-
-        #FCL 2
-        W_fc2 = self.weight_variable([1164, 100])
-        b_fc2 = self.bias_variable([100])
-
-        h_fc2 = tf.nn.relu(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
-
-        h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
-
-        #FCL 3
-        W_fc3 = self.weight_variable([100, 50])
-        b_fc3 = self.bias_variable([50])
-
-        h_fc3 = tf.nn.relu(tf.matmul(h_fc2_drop, W_fc3) + b_fc3)
-
-        h_fc3_drop = tf.nn.dropout(h_fc3, keep_prob)
-
-        #FCL 3
-        W_fc4 = self.weight_variable([50, 10])
-        b_fc4 = self.bias_variable([10])
-
-        h_fc4 = tf.nn.relu(tf.matmul(h_fc3_drop, W_fc4) + b_fc4)
-
-        h_fc4_drop = tf.nn.dropout(h_fc4, keep_prob)
-
-        #Output
-        W_fc5 = self.weight_variable([10, OUT_SHAPE])
-        b_fc5 = self.bias_variable([OUT_SHAPE])
-
-        self.y = tf.matmul(h_fc4_drop, W_fc5) + b_fc5
-
-class tf_training(object):
-    def __init__(self, model_savePath, active_dataset, model_):
-        try:
-            import tensorflow as tf
-        except ImportError:
-            print("Cant Import TF on the FLY... sucks...")
-
-        try:
-            import _MODEL_
-        except ImportError:
-            print("Cant Import Model Details... sucks...")
-        
+class tf_training(QThread):
+    def setup(self, model_savePath, active_dataset, model_):        
         print("TF Version: {}\nModules loaded Properly!".format(tf.__version__))
         print("Filename = {}\nFinal Layer: {}".format(model_savePath, model_.y))
         
@@ -250,7 +60,7 @@ class tf_training(object):
         self.active_dataset = active_dataset
         self.model_ = _MODEL_
 
-    def trainloop(self, sess=None):
+    def run(self, sess=None):
         model = self.model_
         data = self.active_dataset
         # Start session
@@ -370,6 +180,7 @@ class Trainer(AGBlank):
             return False
         self.print_console(msg)
         self.active_dataset = data_splitset
+        self.actionButton.setEnabled(True)
         return True
 
     def train_network(self, iters=5):
@@ -413,6 +224,7 @@ class Trainer(AGBlank):
         self.selector.setEnabled(True)
         self.selectingRom = True
         self.actionButton.setEnabled(False)
+        self.checkButton.setEnabled(False)
         self.currentGame = False
         self.build_selector()
         
@@ -446,7 +258,7 @@ class Trainer(AGBlank):
             return
             
         # if we have a list of Dirs to work on ...
-        self.actionButton.setEnabled(True)
+        self.checkButton.setEnabled(True)
         # click on the button!!!
                    
     def build_selector(self, folder=""):
@@ -472,11 +284,12 @@ class Trainer(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Start Training the model"""
-        self.tf_training.train()
+        self.train_network()
         pass
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
+        self.select_data()
         """Test Button for pressing broken parts"""
         pass
          
