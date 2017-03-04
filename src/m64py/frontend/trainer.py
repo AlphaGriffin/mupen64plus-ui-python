@@ -35,6 +35,8 @@ Tensorflow Model Creation and Training SOFTWARE:
     (2) take the model to Alphagriffin.com or your own AWS for further
     optimization.
 
+    Step 4 - testing visual studios project
+
 """.format(VERSION)
 
 class Trainer(AGBlank):

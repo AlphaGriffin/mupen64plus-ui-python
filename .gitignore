@@ -1,7 +1,7 @@
 *.pyc
 *.swp
 /src/m64py/ui/*.py
-
+/mupen64plus_visualstudios_solution
 /build
 .idea
 /dist/*
