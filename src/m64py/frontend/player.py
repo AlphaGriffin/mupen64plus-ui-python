@@ -18,13 +18,14 @@ from m64py.frontend.agblank import AGBlank
 from PyQt5.QtCore import pyqtSlot, QThread#, QTimer
 from PyQt5.QtWidgets import QAbstractItemView
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import os, sys#, time, shutil
+import os, sys, time #, shutil
 #from glob import glob as check
 import numpy as np
 import tensorflow as tf
 from PIL import Image
 
 import ag.logging as log
+import m64py.tf.model
 
 VERSION = sys.version
 
@@ -35,6 +36,9 @@ ARTIFICIAL PLAYER:
         FIXME
 """.format(VERSION,)
 
+#
+# USER INTERFACE
+#
 
 class Player(AGBlank):
     """AG_Player Widget of MuPen64 Python Ui"""
@@ -51,9 +55,8 @@ class Player(AGBlank):
         self.print_console("AlphaGriffin.com - AI Player")
 
         # AI machine player
-        self.ai_player = TensorPlay()
+        self.ai_thread = PlayerThread(self, TensorPlay(os.path.join(self.root_dir, 'screenshot')))
         # AI will communicate with game through a WEBSERVER
-        self.server_thread = ServerThread(parent=self)
 
         # model selector (don't populate it until window is actually shown)
         self.selectorLabel.setText('Existing Trained Models:')
@@ -121,9 +124,14 @@ class Player(AGBlank):
             self.selected = selected[0].text();
             self.input.setText(os.path.join(self.work_dir, self.selected))
             self.actionButton.setEnabled(True)
+            self.print_console("You Selected: {}".format(self.selected))
+            self.print_console("")
+            self.print_console("    Hit  < Play >  when ready")
+            self.print_console("")
+            self.print_console(" (don't forget to load a ROM first and get to position)")
 
     #
-    # STEP 2 - let's go!
+    # STEP 2 - start playing!
     #
 
     @pyqtSlot()
@@ -134,94 +142,167 @@ class Player(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Check game running state and if so start the play process"""
-        self.worker.core_state_query(1)
-        loaded = self.worker.state in [2, 3]
-
-        if loaded:
-            log.info("getting ready to play...")
-            play_game()
+        if self.playing:
+            self.ai_thread.playing = False  # this signals the thread to quit on its own, cleanly
+            self.print_console("Waiting for AI to settle down")
+            log.debug("waiting for ai_thread to finish...")
+            self.actionButton.setEnabled(False)
+            self.ai_thread.wait()
+            log.debug("thread out")
+            self.playing = False;
+            self.actionButton.setText("Play")
+            self.actionButton.setEnabled(True)
 
         else:
-            self.print_console('SORRY...')
-            self.print_console('    You must load a ROM first for me to play')
-            
-    def play_game(self):
-        """(ROM should already be running) Delegate to TensorPlay to load model, start auto-shots & webserver"""
+            self.worker.core_state_query(1)
+            log.debug("worker state: {}".format(self.worker.state))
+            loaded = self.worker.state in [2, 3]
 
-        self.ai_player.load_graph(self.input.text())
+            if loaded:
+                log.info("getting ready to play...")
+                self.ai_thread.start()
+                self.print_console("AI player thread started")
 
-        # if game is on and going
-        # Start autoshots
-        # start get screenshots
-        # load the model and keep it open
-        ## Think
-        joystick = model.y.eval(feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
-        # Post the label to the webserver
-        # webserver.response_message = joystick
-        pass
+                self.print_console("It may take a moment for TensorFlow startup...")
+                self.actionButton.setText('Stop')
+                self.actionButton.setEnabled(False)
+                self.playing = True
 
-    def get_screenshots(self):
-        # search screenshot dir and start a que
-        # go as fast as you can...
-        # pring to log how far behind youre getting
-
-        pass
-
+            else:
+                self.print_console('SORRY...')
+                self.print_console('    You must load a ROM first for me to play')
+ 
     #
+    # STEP 3 - giving up already?
     #
-    #
-
-    def start_server(self):
-        self.web_server = webServer()
-        server = HTTPServer(('', 8321), self.web_server)
-        self.server_thread.set_server(server)
-        self.server_thread.start()
-        self.print_console('Started httpserver on port 8321')
-
-    def stop_server(self):
-        self.server_thread.quit()
-        return True
 
     def hide(self):
         """Hide this window"""
+
+        if self.playing:
+            self.ai_thread.playing = False  # this signals the thread to quit on its own, cleanly
+            self.print_console("Waiting for AI to settle down")
+            self.debug("waiting for ai_thread to finish...")
+            self.ai_thread.wait()
+            self.playing = False;
+            self.actionButton.setText("Play")
+
         super().hide()
 
+
+
+#
+# CORE FUNCTIONALITY
+#
+
+
+class PlayerThread(QThread):
+    """Thread for the TensorPlay image classifier (which is the real brains)"""
+
+    def __init__(self, parent, thinker):
+        log.debug("PlayerThread init: {}".format(thinker))
+        super().__init__(parent)
+        
+        self.parent = parent
+        self.thinker = thinker
+        self.model_path = None
+        self.web_handler = PlayerInputRequestHandler()
+        self.server_thread = ServerThread(parent=self.parent)
+
+        self.playing = True
+
+    def run(self):
+        log.info("PlayerThread running");
+ 
+        # on your marks...
+        self.model_path = self.parent.input.text()
+        self.thinker.load_graph(self.model_path)
+
+        # get ready...
+        self.parent.print_console("Starting local HTTP server for AI input pass-through")
+        self.start_server()
+        self.parent.print_console("Turning on autoshots")
+        self.parent.worker.toggle_autoshots()
+
+        # set...
+        self.parent.print_console("All set!")
+        self.parent.actionButton.setEnabled(True)
+
+        # go!
+        while self.playing:
+            log.warn("PlayerThread FIXME") # FIXME
+
+            image = self.thinker.dequeue_image()
+            if image:
+                log.debug("   ...dequeued image from disk: {}".format(image))
+
+                ### FIXME: LEFT OFF HERE... ALMOST THERE!!!
+#                moves = self.thinker.classify_image(image)
+#                self.thinker.web_handler.output(moves)
+
+            else:
+                time.sleep(.01)  # waiting 10 ms
+
+        # peace out
+        log.debug("player thread cleaning up...")
+        self.parent.worker.toggle_autoshots()
+        self.stop_server()
+        self.thinker.forget()
+
+        log.info("PlayerThread done")
+
+    def start_server(self):
+        log.debug("start_server()")
+        server = HTTPServer(('', 8321), self.web_handler)
+
+        log.debug("starting server thread")
+        self.server_thread.set_server(server)
+        self.server_thread.start()
+
+        self.parent.print_console('Started httpserver on port 8321')
+
+    def stop_server(self):
+        log.debug("stop_server()")
+        self.server_thread.quit()
+        return True
 
 
 class TensorPlay(object):
     """Actual connection to TensorFlow subsystem and image processing"""
 
-    def __init__(self):
-        #self.options = options
-        # need some pathy kind of stuff here
-        #self.save_path = self.options.save_dir + '_best_validation_1_'
-        x=0
+    def __init__(self, autoshots_path):
+        log.debug("TensorPlay init: {}".format(autoshots_path))
+
+        self.session = None
+        self.autoshots = autoshots_path
 
     def load_graph(self, folder):
         """Load the trained model from the given folder path"""
         log.debug("load_graph(): folder = {}".format(folder))
 
-        log.info("starting TensorFlow session...")
-        session = tf.Session
-        saver = tf.train.Saver()
+        log.info("starting TensorFlow version {} session...".format(tf.__version__))
+        self.session = tf.InteractiveSession()
 
-        # this path here will be passed by the selectorator
-        # THERE ARE NO FILE EXTIONONS IN THE FUTURE!!!!
-        save_path = folder + 'alpha.griffin'
-        log.debug("restoring: {}".format(save_path))
-        saver.restore(sess=session, save_path=save_path)
+        metafile = os.path.join(folder, 'alpha.griffin-0.meta')
+        log.debug("   metafile: {}".format(metafile))
+
+        log.debug("   tf.train.import_meta_graph()...")
+        saver = tf.train.import_meta_graph(metafile)
+
+        log.debug("   saver.restore()...")
+        saver.restore(sess=self.session, save_path=metafile)
+
         log.info("model successfully loaded")
 
-    def classify(self, Image):
-        img = prepare_image(Image)
-        joystick = _best_validation_1_
-        output = [
-            int(joystick[0] * 80),
-            int(joystick[1] * 80),
-            int(round(joystick[2])),
-            int(round(joystick[3])),
-            int(round(joystick[4])),
-        ]
+    def dequeue_image(self):
+        """Find next autoshot image, load and return it while removing it from disk"""
+
+        for file in os.listdir(self.autoshots):
+            log.debug("found file: {}".format(file))
+            
+            # load image into memory (performing minor processing) and remove from disk
+            img = self.prepare_image(file)
+            os.remove(file)
 
     def prepare_image(self, img, makeBW=False):
         """ This resizes the image to a tensorflowish size """
@@ -232,42 +313,69 @@ class TensorPlay(object):
         #    numpy_img = self.make_BW(numpy_img)           # grayscale
         return numpy_img
 
-
-
-class PlayerInputServer(BaseHTTPRequestHandler):
-    """A simple web server that, upon request from the input plugin, sends controller commands"""
-    def __init__(self):
-        self.response_message = []
-
-    def log_message(self, format, *args):
-        pass
-
-    def do_GET(self):
-        ### calibration
+    def classify_image(self, Image):
+        """Return labels matching the supplied image. Image should already be prepared."""
+        #joystick = _best_validation_1_
+        joystick = model.y.eval(feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
         output = [
-            int(self.response_message[0] * 80),
-            int(self.response_message[1] * 80),
-            int(round(self.response_message[2])),
-            int(round(self.response_message[3])),
-            int(round(self.response_message[4])),
+            int(joystick[0] * 80),
+            int(joystick[1] * 80),
+            int(round(joystick[2])),
+            int(round(joystick[3])),
+            int(round(joystick[4])),
         ]
 
-        message = "Got Get request.\n\tAI: {}".format(str(output))
+        return output
 
-        ### respond with action
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.end_headers()
-        self.wfile.write(output)  # this is the output to http here
-        return message
+    def forget(self):
+        """Wrap it up (close session, clean up)"""
+        log.debug("closing TensorFlow session...")
+        self.session.close()
+        log.info("TensorFlow session closed")
+
 
 
 class ServerThread(QThread):
     """Thread for running the web server"""
 
     def set_server(self, server):
+        log.debug("set_server(): {}".format(server))
         self.server = server
 
     def run(self):
-        self.server.serve_forver()
+        log.debug("ServerThread run()")
+        self.server.serve_forever()
+
+
+class PlayerInputRequestHandler(BaseHTTPRequestHandler):
+    """Request handler for httpserver that sends controller commands upon request from the input plugin"""
+    def __init__(self):
+        self.response_message = [0, 0, 0, 0, 0]
+
+    def output(self, data):
+        log.debug("   set response_message <- {}".format(data))
+        self.response_message = data
+
+    def log_message(self, format, *args):
+        pass
+
+    def do_GET(self):
+        ### calibration
+#        output = [
+#            int(self.response_message[0] * 80),
+#            int(self.response_message[1] * 80),
+#            int(round(self.response_message[2])),
+#            int(round(self.response_message[3])),
+#            int(round(self.response_message[4])),
+#        ]
+
+        log.debug("    <<< GET >>> :AI: {}".format(str(output)))
+
+        ### respond with action
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(self.response_message)  # this is the output to http here
+
+        return True
 
