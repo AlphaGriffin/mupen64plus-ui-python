@@ -38,7 +38,9 @@ class mupenDataset(object):
         self.trainer = self
         
         # startup
-        self.build_return()
+        self.msg = "Loading Numpy Dataset"
+        self.msg += "Images: {}".format(str(imgs))
+        self.msg += "Labels: {}".format(str(labels))
         
     def build_return(self):
         """ This opens the files and does the label argmax for you"""
@@ -54,9 +56,10 @@ class mupenDataset(object):
         self.test_cls = np.array([label.argmax() for label in self.test_labels])
         
         # This is good to know things are working
-        if self.options.verbose: print ('ALL: images.shape: %s labels.shape: %s' % (self._all_images_.shape, self._all_labels_.shape))
-        if self.options.verbose: print ('TRAIN: images.shape: %s labels.shape: %s' % (self.train_images.shape, self.train_labels.shape))
-        if self.options.verbose: print ('TEST: images.shape: %s labels.shape: %s' % (self.test_images.shape, self.test_labels.shape)) 
+        self.msg = "ALL: images.shape: {} labels.shape: {}".format(self._all_images_.shape, self._all_labels_.shape)
+        self.msg += "TRAIN: images.shape: {} labels.shape: {}".format(self.train_images.shape, self.train_labels.shape)
+        self.msg += "'TEST: images.shape: {} labels.shape: {}".format(self.test_images.shape, self.test_labels.shape)
+        return self, self.msg
         
     def load(self, images, labels):
         """ Load 2 numpy objects as a set images, labels in: paths, out: np.arrays"""
@@ -85,57 +88,13 @@ class mupenDataset(object):
 
         return train_images, train_labels, test_images, test_labels
 
-    def next_batch2(self, batch_size, shuffle=False, test=False):
-        """
-        Shuffle is off by default
-        Test is off by default... switches which set to take batch from
-        """
-        # which set are we using??
-        images = self.train_images
-        labels = self.train_labels
-        if test:
-            images = self.test_images
-            labels = self.test_labels
-
-        # get our start postition
-        start = self._index_in_epoch
-        self._index_in_epoch += batch_size
-
-        if self._index_in_epoch > self._num_examples:
-            # Finished epoch
-            self._epochs_completed += 1
-
-            # Shuffle the data
-            if shuffle:
-                perm = np.arange(self._num_examples) # should add some sort of seeding for verification
-                np.random.shuffle(perm)
-                images = images[perm]
-                labels = labels[perm]
-
-            # Start next epoch
-            start = 0
-            self._index_in_epoch = batch_size
-            assert batch_size <= self._num_examples
-        end = self._index_in_epoch
-
-        # batch check
-        # if len(images) is not len(labels):
-        #    return False
-        return images[start:end], labels[start:end], self._epochs_completed
-
-    def next_batch(self, batch_size,shuffle=False):
+    def next_batch(self, batch_size):
         """ Shuffle is off by default """
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
         if self._index_in_epoch > self._num_examples:
             # Finished epoch
             self._epochs_completed += 1
-            # Shuffle the data
-            if shuffle:
-                perm = np.arange(self._num_examples) # should add some sort of seeding for verification
-                np.random.shuffle(perm)
-                self._images = self._images[perm]
-                self._labels = self._labels[perm]
             # Start next epoch
             start = 0
             self._index_in_epoch = batch_size
