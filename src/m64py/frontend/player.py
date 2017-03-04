@@ -15,20 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtCore import pyqtSlot#, QTimer
+from PyQt5.QtCore import pyqtSlot, QThread#, QTimer
 from PyQt5.QtWidgets import QAbstractItemView
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import os, sys#, time, shutil
 #from glob import glob as check
-#import pandas as pd
 import numpy as np
-
-#import lib.build_network as net         # Plug all the data into Tensorflow... very carefully...
-#import lib.process_network as proc      # Actually run the TF machine
+import tensorflow as tf
+from PIL import Image
 
 import ag.logging as log
 
-
-#from PIL import Image
 VERSION = sys.version
 
 # FIXME
@@ -37,14 +34,91 @@ INTRO =\
 ARTIFICIAL PLAYER:
         FIXME
 """.format(VERSION,)
-        
+
+
+cla
+class webServer(BaseHTTPRequestHandler):
+    def __init__(self):
+        self.response_message = []
+
+    def log_message(self, format, *args):
+        pass
+
+    def do_GET(self):
+        ### calibration
+        output = [
+            int(self.response_message[0] * 80),
+            int(self.response_message[1] * 80),
+            int(round(self.response_message[2])),
+            int(round(self.response_message[3])),
+            int(round(self.response_message[4])),
+        ]
+
+        message = "Got Get request.\n\tAI: {}".format(str(output))
+
+        ### respond with action
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(output)  # this is the output to http here
+        return message
+
+ss AThread(QThread):
+
+    def set_server(self, server):
+        self.server = server
+
+    def run(self):
+        self.server.serve_forver()
+
+
+class Play(object):
+
+    def __init__(self, options):
+        self.options = options
+        # need some pathy kind of stuff here
+        self.save_path = self.options.save_dir + '_best_validation_1_'
+
+    def load_graph(self, session):
+        session = tf.Session
+        saver = tf.train.Saver()
+
+        # this path here will be passed by the selectorator
+        # THERE ARE NO FILE EXTIONONS IN THE FUTURE!!!!
+        save_path = self.options.log_dir + 'alpha.griffin'
+        saver.restore(sess=session, save_path=save_path)
+
+    def classify(self, Image):
+        img = prepare_image(Image)
+        joystick = _best_validation_1_
+        output = [
+            int(joystick[0] * 80),
+            int(joystick[1] * 80),
+            int(round(joystick[2])),
+            int(round(joystick[3])),
+            int(round(joystick[4])),
+        ]
+
+    def prepare_image(self, img, makeBW=False):
+        """ This resizes the image to a tensorflowish size """
+        pil_image = Image.open(img)                       # open img
+        x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
+        numpy_img = np.array(x)                           # convert to numpy
+        # if makeBW:
+        #    numpy_img = self.make_BW(numpy_img)           # grayscale
+        return numpy_img
+
+
 class Player(AGBlank):
     """AG_Player Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
         super().__init__(parent)
         self.setWindowTitle('AG Player')
         self.print_console("AlphaGriffin.com - AI Player")
-
+        # AI machine player
+        self.ai_player = Play(self.options)  # SHIT... where are the options?
+        # AI will communicate with game through a WEBSERVER
+        self.server_thread = AThread(parent=self)
         # model selector (don't populate it until window is actually shown)
         self.selectorLabel.setText('Existing Trained Models:')
         #self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -66,23 +140,13 @@ class Player(AGBlank):
         
         # status flags
         self.playing = False
+        self.serving = False
         self.selected = None
  
         # all set!
         self.print_console(INTRO)
     
-    def show(self):
-        """Show this window"""
-        super().show()
 
-        if not self.selector.isEnabled():
-            self.populateSelector()
-            self.selector.setEnabled(True)
-
-        
-    def hide(self):
-        """Hide this window"""
-        super().hide()
 
 
     def populateSelector(self, folder=""):
@@ -106,24 +170,46 @@ class Player(AGBlank):
             self.print_console(msg)
 
            
-            
-    ###
-    ###  UI event handlers
-    ###
-    
-#    @pyqtSlot()
-#    def on_actionButton_clicked(self):
-#        """Process the files"""
-#        self.test = 0
-#        #self.processing_()
+    def play_game(self, folder):
+        # if game is on and going
+        # Start autoshots
+        # start get screenshots
+        # load the model and keep it open
+        ## Think
+        joystick = model.y.eval(feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
+        # Post the label to the webserver
+        # webserver.response_message = joystick
+        pass
+
+    def start_server(self):
+        self.web_server = webServer()
+        server = HTTPServer(('', 8321), self.web_server)
+        self.server_thread = AThread(parent=self)
+        self.server_thread.set_server(server)
+        self.server_thread.start()
+        self.print_console('Started httpserver on port 8321')
+
+    def stop_server(self):
+        self.server_thread.quit()
+        return True
+
+    def get_screenshots(self):
+        # search screenshot dir and start a que
+        # go as fast as you can...
+        # pring to log how far behind youre getting
+
+        pass
+
+    @pyqtSlot()
+    def on_actionButton_clicked(self):
+        """Process the files"""
         
-#    @pyqtSlot()
-#    def on_checkButton_clicked(self):
-#        """Test Button for pressing broken parts"""
-#        # reset and select game again...
-#        self.test = 0
-#        #self.getSaves()
-#        #self.print_console(self.selection)
+    @pyqtSlot()
+    def on_checkButton_clicked(self):
+        """Test Button for pressing broken parts"""
+        # reset and select game again...
+        self.start_server()
+        self.print_console("Starting Server")
          
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
@@ -141,4 +227,15 @@ class Player(AGBlank):
 #        self.test = 0
 #        #self.stop()
 #        #super().closeEvent()
-        
+
+    def show(self):
+        """Show this window"""
+        super().show()
+
+        if not self.selector.isEnabled():
+            self.populateSelector()
+            self.selector.setEnabled(True)
+
+    def hide(self):
+        """Hide this window"""
+        super().hide()
