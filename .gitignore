@@ -3,5 +3,6 @@
 /src/m64py/ui/*.py
 
 /build
-
+.idea
+/dist/*
 m64py.py

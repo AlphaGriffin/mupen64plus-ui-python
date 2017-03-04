@@ -18,8 +18,6 @@ class mupenDataset(object):
         self.height                = 66
         self.width                 = 200
         self.num_channels          = 3
-        
-        # fuck the timestamp is still in it... thats gonna f it all up im sure of it...
         self.num_classes           = 5 # technically this is the # of button inputs but i cant tell how its used here??
         self._epochs_completed     = 0
         self._index_in_epoch       = 0
@@ -72,44 +70,21 @@ class mupenDataset(object):
 
         return train_images, train_labels, test_images, test_labels
     
-    """
-    def next_batch_shuffle(self, batch_size, fake_data=False):
-        #Return the next `batch_size` examples from this data set
-        if fake_data:
-          fake_image = [1] * 784
-          if self.one_hot:
-            fake_label = [1] + [0] * 9
-          else:
-            fake_label = 0
-          #return [fake_image for _ in xrange(batch_size)], [
-          #    fake_label for _ in xrange(batch_size)
-          #]
-        start = self._index_in_epoch
-        self._index_in_epoch += batch_size
-        if self._index_in_epoch > self._num_examples:
-          # Finished epoch
-          self._epochs_completed += 1
-          # Shuffle the data
-          perm = np.arange(self._num_examples)
-          np.random.shuffle(perm)
-          self._images = self._images[perm]
-          self._labels = self._labels[perm]
-          # Start next epoch
-          start = 0
-          self._index_in_epoch = batch_size
-          assert batch_size <= self._num_examples
-        end = self._index_in_epoch
-        return self._images[start:end], self._labels[start:end]
-    """
-    def next_batch(self, batch_size):
+    def next_batch(self, batch_size,shuffle=False):
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
         if self._index_in_epoch > self._num_examples:
             # Finished epoch
             self._epochs_completed += 1
+            # Shuffle the data
+            if shuffle:
+                perm = np.arange(self._num_examples) # should add some sort of seeding for verification
+                np.random.shuffle(perm)
+                self._images = self._images[perm]
+                self._labels = self._labels[perm]
             # Start next epoch
             start = 0
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
         end = self._index_in_epoch
-        return self._all_images_[start:end], self._all_labels_[start:end]
+        return self._all_images_[start:end], self._all_labels_[start:end], self._epochs_completed
