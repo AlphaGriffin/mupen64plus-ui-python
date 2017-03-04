@@ -18,6 +18,9 @@
 from PyQt5.QtWidgets import QDialog
 from m64py.ui.agblank_ui import Ui_AGBlank
 from PyQt5.QtGui import QTextCursor
+import os
+
+import ag.logging as log
 
 # Abstract class for the record/playback interfaces
 #
@@ -28,13 +31,29 @@ class AGBlank(QDialog, Ui_AGBlank):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
+        self.work_dir = None
 
     def print_console(self, msg): 
         """Takes a String and prints to console"""
         self.console.moveCursor(QTextCursor.End)
         self.console.insertPlainText("{}\n".format(msg))
         #print(msg)
- 
+        
+    def setWorker(self, worker, work_dir=None):
+        """Get Worker from main code and check the local Userdata folder"""
+        log.debug("AGBlank::setWorker()")
+        self.worker = worker
+        self.root_dir = self.worker.core.config.get_path("UserData")
+        log.info("root dir set to: {}".format(self.root_dir))
+
+        if work_dir:
+            self.work_dir = os.path.join(self.root_dir, work_dir)
+        else:
+            # for backwards-compatibility / failsafe default
+            #   subclass should set work_dir to a subfolder of root_dir
+            self.work_dir = self.root_dir
+        log.info("work dir set to: {}".format(self.work_dir))
+
 
 #    @pyqtSlot()
 #    def on_actionRecording_Console_triggered(self):

@@ -36,7 +36,206 @@ ARTIFICIAL PLAYER:
 """.format(VERSION,)
 
 
-class webServer(BaseHTTPRequestHandler):
+class Player(AGBlank):
+    """AG_Player Widget of MuPen64 Python Ui"""
+
+    #
+    # STEP 0 - default setup
+    #
+
+    def __init__(self, parent, worker):
+        # basic set-up
+        super().__init__(parent)
+        self.setWorker(worker, 'model')
+        self.setWindowTitle('AG Player')
+        self.print_console("AlphaGriffin.com - AI Player")
+
+        # AI machine player
+        self.ai_player = TensorPlay()
+        # AI will communicate with game through a WEBSERVER
+        self.server_thread = ServerThread(parent=self)
+
+        # model selector (don't populate it until window is actually shown)
+        self.selectorLabel.setText('Existing Trained Models:')
+        self.selector.setEnabled(False)
+
+        # using input as full selected path readout (read-only for now)
+        self.inputLabel.setText('full selected path:')
+        self.input.setEnabled(False)
+ 
+        # play button
+        self.actionButton.setText('Play')
+        self.actionButton.setEnabled(False)
+
+        # not using checkButton (yet)
+        self.checkButton.setEnabled(False)
+       
+        # status flags
+        self.playing = False
+        self.serving = False
+        self.selected = None
+ 
+        # all set!
+        self.print_console(INTRO)
+
+    #
+    # STEP 1 - open window and pick a previously-trained model
+    #
+       
+    def show(self):
+        """Show this window"""
+        super().show()
+
+        if not self.selector.isEnabled():
+            self.populateSelector()
+            self.selector.setEnabled(True)
+    
+    def populateSelector(self):
+        """This populates the model list"""
+        log.debug("populateSelector()")
+        self.selector.clear()
+
+        log.debug("about to list files: {}".format(self.work_dir))
+        try:
+            files = os.listdir(self.work_dir)
+            log.debug("files: {}".format(files))
+
+            if files:
+                for model in files:
+                    self.selector.addItem(model)
+            else:
+                self.print_console("No models found: {}".format(self.work_dir))
+        except FileNotFoundError:
+            msg = "model directory not found: {}".format(self.work_dir)
+            log.error(msg)
+            self.print_console(msg)
+         
+    @pyqtSlot()
+    def on_selector_itemSelectionChanged(self):
+        log.debug("on_selector_itemSelectionChanged()")
+        self.selected = None;
+
+        selected = self.selector.selectedItems()
+        if len(selected) is 1:
+            log.debug("got a selection")
+            self.selected = selected[0].text();
+            self.input.setText(os.path.join(self.work_dir, self.selected))
+            self.actionButton.setEnabled(True)
+
+    #
+    # STEP 2 - let's go!
+    #
+
+    @pyqtSlot()
+    def on_checkButton_clicked(self):
+        """Test Button for pressing broken parts"""
+        log.warn("on_checkButton_clicked(): NOT IMPLEMENTED")  # FIXME?
+
+    @pyqtSlot()
+    def on_actionButton_clicked(self):
+        """Check game running state and if so start the play process"""
+        self.worker.core_state_query(1)
+        loaded = self.worker.state in [2, 3]
+
+        if loaded:
+            log.info("getting ready to play...")
+            play_game()
+
+        else:
+            self.print_console('SORRY...')
+            self.print_console('    You must load a ROM first for me to play')
+            
+    def play_game(self):
+        """(ROM should already be running) Delegate to TensorPlay to load model, start auto-shots & webserver"""
+
+        self.ai_player.load_graph(self.input.text())
+
+        # if game is on and going
+        # Start autoshots
+        # start get screenshots
+        # load the model and keep it open
+        ## Think
+        joystick = model.y.eval(feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
+        # Post the label to the webserver
+        # webserver.response_message = joystick
+        pass
+
+    def get_screenshots(self):
+        # search screenshot dir and start a que
+        # go as fast as you can...
+        # pring to log how far behind youre getting
+
+        pass
+
+    #
+    #
+    #
+
+    def start_server(self):
+        self.web_server = webServer()
+        server = HTTPServer(('', 8321), self.web_server)
+        self.server_thread.set_server(server)
+        self.server_thread.start()
+        self.print_console('Started httpserver on port 8321')
+
+    def stop_server(self):
+        self.server_thread.quit()
+        return True
+
+    def hide(self):
+        """Hide this window"""
+        super().hide()
+
+
+
+class TensorPlay(object):
+    """Actual connection to TensorFlow subsystem and image processing"""
+
+    def __init__(self):
+        #self.options = options
+        # need some pathy kind of stuff here
+        #self.save_path = self.options.save_dir + '_best_validation_1_'
+        x=0
+
+    def load_graph(self, folder):
+        """Load the trained model from the given folder path"""
+        log.debug("load_graph(): folder = {}".format(folder))
+
+        log.info("starting TensorFlow session...")
+        session = tf.Session
+        saver = tf.train.Saver()
+
+        # this path here will be passed by the selectorator
+        # THERE ARE NO FILE EXTIONONS IN THE FUTURE!!!!
+        save_path = folder + 'alpha.griffin'
+        log.debug("restoring: {}".format(save_path))
+        saver.restore(sess=session, save_path=save_path)
+        log.info("model successfully loaded")
+
+    def classify(self, Image):
+        img = prepare_image(Image)
+        joystick = _best_validation_1_
+        output = [
+            int(joystick[0] * 80),
+            int(joystick[1] * 80),
+            int(round(joystick[2])),
+            int(round(joystick[3])),
+            int(round(joystick[4])),
+        ]
+
+    def prepare_image(self, img, makeBW=False):
+        """ This resizes the image to a tensorflowish size """
+        pil_image = Image.open(img)                       # open img
+        x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
+        numpy_img = np.array(x)                           # convert to numpy
+        # if makeBW:
+        #    numpy_img = self.make_BW(numpy_img)           # grayscale
+        return numpy_img
+
+
+
+class PlayerInputServer(BaseHTTPRequestHandler):
+    """A simple web server that, upon request from the input plugin, sends controller commands"""
     def __init__(self):
         self.response_message = []
 
@@ -62,7 +261,9 @@ class webServer(BaseHTTPRequestHandler):
         self.wfile.write(output)  # this is the output to http here
         return message
 
-class AThread(QThread):
+
+class ServerThread(QThread):
+    """Thread for running the web server"""
 
     def set_server(self, server):
         self.server = server
@@ -70,172 +271,3 @@ class AThread(QThread):
     def run(self):
         self.server.serve_forver()
 
-
-class Play(object):
-
-    def __init__(self):
-        #self.options = options
-        # need some pathy kind of stuff here
-        #self.save_path = self.options.save_dir + '_best_validation_1_'
-        x=0
-
-    def load_graph(self, session):
-        session = tf.Session
-        saver = tf.train.Saver()
-
-        # this path here will be passed by the selectorator
-        # THERE ARE NO FILE EXTIONONS IN THE FUTURE!!!!
-        save_path = self.options.log_dir + 'alpha.griffin'
-        saver.restore(sess=session, save_path=save_path)
-
-    def classify(self, Image):
-        img = prepare_image(Image)
-        joystick = _best_validation_1_
-        output = [
-            int(joystick[0] * 80),
-            int(joystick[1] * 80),
-            int(round(joystick[2])),
-            int(round(joystick[3])),
-            int(round(joystick[4])),
-        ]
-
-    def prepare_image(self, img, makeBW=False):
-        """ This resizes the image to a tensorflowish size """
-        pil_image = Image.open(img)                       # open img
-        x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
-        numpy_img = np.array(x)                           # convert to numpy
-        # if makeBW:
-        #    numpy_img = self.make_BW(numpy_img)           # grayscale
-        return numpy_img
-
-
-class Player(AGBlank):
-    """AG_Player Widget of MuPen64 Python Ui"""
-    def __init__(self, parent, worker):
-        super().__init__(parent)
-        self.setWindowTitle('AG Player')
-        self.print_console("AlphaGriffin.com - AI Player")
-        # AI machine player
-        self.ai_player = Play()  # SHIT... where are the options?
-        # AI will communicate with game through a WEBSERVER
-        self.server_thread = AThread(parent=self)
-        # model selector (don't populate it until window is actually shown)
-        self.selectorLabel.setText('Existing Trained Models:')
-        #self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.selector.setEnabled(False)
-
-        # play button
-        self.actionButton.setText('Play')
-        self.actionButton.setEnabled(False)
-
-        # not using checkButton or input (yet)
-        self.checkButton.setEnabled(False)
-        self.inputLabel.setText('FIXME:')
-        self.input.setEnabled(False)
-        
-        # use the worker
-        self.worker = worker
-        self.root_dir = self.worker.core.config.get_path("UserData")
-        self.work_dir = os.path.join(self.root_dir, "model")
-        
-        # status flags
-        self.playing = False
-        self.serving = False
-        self.selected = None
- 
-        # all set!
-        self.print_console(INTRO)
-    
-
-
-
-    def populateSelector(self, folder=""):
-        """This populates the model list"""
-        log.debug("populateSelector()")
-        self.selector.clear()
-
-        log.debug("about to list files: {}".format(self.work_dir))
-        try:
-            files = os.listdir(self.work_dir)
-            log.debug("files: {}".format(files))
-
-            if files:
-                for model in files:
-                    self.selector.addItem(model)
-            else:
-                self.print_console("No models found: {}".format(self.work_dir))
-        except FileNotFoundError:
-            msg = "model directory not found: {}".format(self.work_dir)
-            log.error(msg)
-            self.print_console(msg)
-
-           
-    def play_game(self, folder):
-        # if game is on and going
-        # Start autoshots
-        # start get screenshots
-        # load the model and keep it open
-        ## Think
-        joystick = model.y.eval(feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
-        # Post the label to the webserver
-        # webserver.response_message = joystick
-        pass
-
-    def start_server(self):
-        self.web_server = webServer()
-        server = HTTPServer(('', 8321), self.web_server)
-        self.server_thread = AThread(parent=self)
-        self.server_thread.set_server(server)
-        self.server_thread.start()
-        self.print_console('Started httpserver on port 8321')
-
-    def stop_server(self):
-        self.server_thread.quit()
-        return True
-
-    def get_screenshots(self):
-        # search screenshot dir and start a que
-        # go as fast as you can...
-        # pring to log how far behind youre getting
-
-        pass
-
-    @pyqtSlot()
-    def on_actionButton_clicked(self):
-        """Process the files"""
-        
-    @pyqtSlot()
-    def on_checkButton_clicked(self):
-        """Test Button for pressing broken parts"""
-        # reset and select game again...
-        self.start_server()
-        self.print_console("Starting Server")
-         
-    @pyqtSlot()
-    def on_selector_itemSelectionChanged(self):
-        log.debug("on_selector_itemSelectionChanged()")
-        self.selected = None;
-
-        selected = self.selector.selectedItems()
-        if len(selected) is 1:
-            log.debug("got a selection")
-            self.selected = selected[0].text();
-            self.actionButton.setEnabled(True)
-        
-#    @pyqtSlot()
-#    def closeEvent(self,event=False):
-#        self.test = 0
-#        #self.stop()
-#        #super().closeEvent()
-
-    def show(self):
-        """Show this window"""
-        super().show()
-
-        if not self.selector.isEnabled():
-            self.populateSelector()
-            self.selector.setEnabled(True)
-
-    def hide(self):
-        """Hide this window"""
-        super().hide()
