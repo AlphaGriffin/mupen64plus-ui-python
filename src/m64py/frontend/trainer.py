@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from mupen64.tf.mupen import mupenDataset as data
-import mupen64.tf.model as model
+from m64py.tf.mupen import mupenDataset as data
+import m64py.tf.model as model
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 from glob import glob
