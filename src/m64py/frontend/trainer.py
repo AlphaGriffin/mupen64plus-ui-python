@@ -28,7 +28,8 @@ tfVERSION = tf.__version__
 INTRO =\
 """
 Tensorflow Model Creation and Training SOFTWARE:
-    
+    Python Version: {}
+    Tensorflow Version: {}
     Step 1 - Choose a Dataset.
     
     Step 2 - Click Train New Model. Visit AlphaGriffin.com for other ways and
@@ -40,7 +41,7 @@ Tensorflow Model Creation and Training SOFTWARE:
     optimization.
 
 
-""".format(VERSION)
+""".format(pyVERSION, tfVERSION)
 
 class ServerThread(QThread):
     """Thread for running the web server"""
