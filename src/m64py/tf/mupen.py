@@ -25,8 +25,7 @@ class mupenDataset(object):
         self.height                = 66
         self.width                 = 200
         self.num_channels          = 3
-        self.num_classes           = 5 # technically this is the # of button inputs but i cant tell how its used here??
-        self.batch_size            = self.options.batch_size
+        self.num_classes           = 5  # technically this is the # of button inputs but i cant tell how its used here??
         self.img_size_flat         = self.width * self.height
         
         # Necessary Placeholders for working being done
@@ -39,34 +38,38 @@ class mupenDataset(object):
         
         # startup
         self.msg = "Loading Numpy Dataset"
-        self.msg += "Images: {}".format(str(imgs))
-        self.msg += "Labels: {}".format(str(labels))
+        self.msg += "Images: {} ".format(str(imgs))
+        self.msg += "Labels: {} ".format(str(labels))
+        print(self.msg)
+        self.build_return()
         
     def build_return(self):
         """ This opens the files and does the label argmax for you"""
         # probably _ all stuffs _ is a bad name for stuff ... bud it shouldnt be used
-        self._all_images_, self._all_labels_ = self.load(self.imgs,self.labels)
-        
+        #print("DEBUGS = data 0")
+        self._all_images_, self._all_labels_ = self.load(self.imgs, self.labels)
+        #print("DEBUGS-data 1")
         # this is used for a bunch of stuff
         self._num_examples = self._all_images_.shape[0]
         
         # split up Alldata into some chunks we can use 
-        self.train_images, self.train_labels, self.test_images, self.test_labels = self.split(self._all_images_, self._all_labels_)
-        self.train_cls = np.array([label.argmax() for label in self.train_labels])
-        self.test_cls = np.array([label.argmax() for label in self.test_labels])
+        #self.train_images, self.train_labels, self.test_images, self.test_labels = self.split(self._all_images_, self._all_labels_)
+        self.train_cls = np.array([label.argmax() for label in self._all_labels_])
+        self.test_cls = np.array([label.argmax() for label in self._all_labels_])
         
         # This is good to know things are working
         self.msg = "ALL: images.shape: {} labels.shape: {}".format(self._all_images_.shape, self._all_labels_.shape)
-        self.msg += "TRAIN: images.shape: {} labels.shape: {}".format(self.train_images.shape, self.train_labels.shape)
-        self.msg += "'TEST: images.shape: {} labels.shape: {}".format(self.test_images.shape, self.test_labels.shape)
-        return self, self.msg
+        #self.msg += "TRAIN: images.shape: {} labels.shape: {}".format(self.train_images.shape, self.train_labels.shape)
+        #self.msg += "'TEST: images.shape: {} labels.shape: {}".format(self.test_images.shape, self.test_labels.shape)
+        print(self.msg)
+        #print("DEBUGS - data 2")
         
     def load(self, images, labels):
         """ Load 2 numpy objects as a set images, labels in: paths, out: np.arrays"""
         images = np.load(images)
-        if self.options.verbose: print ("loaded {} images".format(len(images)))
+        print("loaded {} images".format(len(images)))
         labels = np.load(labels)
-        if self.options.verbose: print ("loaded {} labels".format(len(labels)))
+        print("loaded {} labels".format(len(labels)))
         return images, labels
 
     @staticmethod

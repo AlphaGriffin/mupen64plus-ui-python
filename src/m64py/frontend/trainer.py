@@ -16,7 +16,7 @@
 
 from m64py.frontend.agblank import AGBlank
 from m64py.tf.mupen import mupenDataset as Data
-import m64py.tf.model as model
+import m64py.tf.model as Model
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 from glob import glob
@@ -143,15 +143,17 @@ class Trainer(AGBlank):
                 if "label" in file:
                     has_labels_file = True
                     #print("Label File: {}".format(file))
-                    self.label_file  = file
+                    self.label_file = file
             else:
                 print("Bad File name given: {}".format(file))
         if has_image_file and has_labels_file:
             # import the dataset can opener
-            self.print_console("Loading Dataset:\n\t{}".format())
-            Dataset = Data(self.image_file, self.label_file)
-            dataset, msg = Dataset.build_return()
-            return dataset, msg
+            self.print_console("Loading Dataset:\n\tImages{}\n\tLabels: {}".format(self.image_file,
+                                                                                   self.label_file))
+            dataset_ = Data(self.image_file, self.label_file)
+            self.active_dataset = dataset_
+            self.print_console(dataset_.msg)
+            return True
         else:
             "File Names  were no good..."
             return False
@@ -170,11 +172,11 @@ class Trainer(AGBlank):
         files = self.selection
         loadir = os.path.join(self.root_dir, "datasets", self.currentGame)
 
-        data_splitset, msg = self.load_dataset(loadir, files)
-        if not data_splitset:
+        data = self.load_dataset(loadir, files)
+        if not data:
             return False
-        self.print_console(msg)
-        self.active_dataset = data_splitset
+        # self.print_console(data.msg)
+        self.active_dataset = data
         self.actionButton.setEnabled(True)
         return True
 
@@ -280,12 +282,16 @@ class Trainer(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Start Training the model"""
-        self.train_network()
+        # model_savePath, active_dataset, model_
+        TfTraining.setup(self.save_dir, self.active_dataset, Model)
+        while TfTraining.run:
+            print("THIS IS WORKING!!!!")
         pass
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
-        self.select_data()
+        if self.select_data():
+            self.print_console("DEBUGS!")
         """Test Button for pressing broken parts"""
         pass
          
