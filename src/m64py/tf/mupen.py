@@ -68,7 +68,8 @@ class mupenDataset(object):
         labels = np.load(labels)
         if self.options.verbose: print ("loaded {} labels".format(len(labels)))
         return images, labels
-    
+
+    @staticmethod
     def split(self, images, labels):
         """ Split the dataset in to different groups for many reasons"""
         # this needs a SEED !!! OMG !!!!

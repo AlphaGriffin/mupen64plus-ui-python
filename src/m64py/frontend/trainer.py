@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from m64py.tf.mupen import mupenDataset as data
+from m64py.tf.mupen import mupenDataset as Data
 import m64py.tf.model as model
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
@@ -43,16 +43,8 @@ Tensorflow Model Creation and Training SOFTWARE:
 
 """.format(pyVERSION, tfVERSION)
 
-class ServerThread(QThread):
-    """Thread for running the web server"""
 
-    def set_server(self, server):
-        self.server = server
-
-    def run(self):
-        self.server.serve_forver()
-
-class tf_training(QThread):
+class TfTraining(QThread):
     def setup(self, model_savePath, active_dataset, model_):        
         print("TF Version: {}\nModules loaded Properly!".format(tf.__version__))
         print("Filename = {}\nFinal Layer: {}".format(model_savePath, model_.y))
@@ -100,6 +92,7 @@ class tf_training(QThread):
     def tfStop(self):
         self.session.close()
 
+
 class Trainer(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
@@ -124,39 +117,40 @@ class Trainer(AGBlank):
         self.selection = []
         self.selectedRom = ""
         self.gamePath = ""
+        self.load_dir = ""
         self.selectingRom = True
         
         # Use the processor
         self.worker = worker
         self.root_dir = self.worker.core.config.get_path("UserData")
-        self.work_dir = os.path.join(self.root_dir, "dataset")
+        self.work_dir = os.path.join(self.root_dir, "datasets")
         self.save_dir = os.path.join(self.root_dir, "model")
         
         self.getSaves()
-        
-        
-    """ TEST FUNCTIONS """
-    def load_dataset(self, loadDir, files):
+
+    """TEST FUNCTIONS"""
+    def load_dataset(self, loadir, files):
         # check file integrity
         has_image_file = False
         has_labels_file = False
         for file in files:
-            print(file)
-            file = glob(os.path.join(loadDir, file))
+            file = os.path.join(self.load_dir, file)
             if os.path.isfile(file):
                 if "image" in file:
                     has_image_file = True
-                    print("Image File: {}".format(file))
+                    #print("Image File: {}".format(file))
                     self.image_file = file
                 if "label" in file:
-                    has_label_file = True
-                    print("Label File: {}".format(file))
+                    has_labels_file = True
+                    #print("Label File: {}".format(file))
                     self.label_file  = file
             else:
                 print("Bad File name given: {}".format(file))
-        if has_image_file and has_label_file:
+        if has_image_file and has_labels_file:
             # import the dataset can opener
-            dataset, msg = data(self.image_file, self.label_file)
+            self.print_console("Loading Dataset:\n\t{}".format())
+            Dataset = Data(self.image_file, self.label_file)
+            dataset, msg = Dataset.build_return()
             return dataset, msg
         else:
             "File Names  were no good..."
@@ -174,9 +168,9 @@ class Trainer(AGBlank):
         * save again and confim
         """
         files = self.selection
-        loadDir = os.path.join(self.root_dir, "datasets", self.currentGame)     
-        
-        data_splitset, msg = self.load_dataset(loadDir, files)
+        loadir = os.path.join(self.root_dir, "datasets", self.currentGame)
+
+        data_splitset, msg = self.load_dataset(loadir, files)
         if not data_splitset:
             return False
         self.print_console(msg)
@@ -205,12 +199,11 @@ class Trainer(AGBlank):
         self.print_console("#############################################")
         filename = os.path.join(self.model_savePath, self.model_fileName)
         self.train_loss = tf_training(filename, self.active_dataset, model_)
-        self.print_console("Completed Training! the AI now EXISTS\nTraining Loss: {}".format(train_loss))
+        self.print_console("Completed Training! the AI now EXISTS\nTraining Loss: {}".format(self.train_loss))
         self.print_console("Greetings Prof. Falcon," +
                            "\tWould you like to play a game?")
-      
-    
-    """ Selector FUNCTIONS """
+
+    """Selector FUNCTIONS"""
     def getSaves(self):
         """
         Creates a list of Datasets for the selected game.
@@ -244,12 +237,14 @@ class Trainer(AGBlank):
         
         # if we have picked a game
         if any(select_string in s for s in self.gamesList):
-            self.currentGame = self.selected[0].text()
+            if not self.currentGame:
+                self.currentGame = self.selected[0].text()
+                self.load_dir = os.path.join(self.work_dir, self.currentGame)
+                self.print_console("Game Save Dir: {}".format(self.load_dir))
             self.selectingRom = False
-            x = os.path.join(self.work_dir,self.currentGame)
-            if os.path.isdir(x):
-                self.print_console("Game Save Dir: {}".format(x))
-                self.build_selector(folder=x)
+
+            if os.path.isdir(self.load_dir):
+                self.build_selector(folder=self.load_dir)
                 return
         
         # if we need to go back and pick a different game
