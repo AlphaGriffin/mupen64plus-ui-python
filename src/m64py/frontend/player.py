@@ -24,10 +24,10 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from PIL import ImageFile
-#ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
+ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
 import ag.logging as log
-import m64py.tf.model
+import m64py.tf.model as Model
 
 VERSION = sys.version
 
@@ -154,11 +154,14 @@ class Player(AGBlank):
             self.print_console("Waiting for AI to settle down")
             log.debug("waiting for ai_thread to finish...")
             self.actionButton.setEnabled(False)
-            self.ai_thread.wait()
-            log.debug("thread out")
-            self.playing = False;
-            self.actionButton.setText("Play")
-            self.actionButton.setEnabled(True)
+            try:
+                self.ai_thread.wait()
+                log.debug("thread out")
+                self.playing = False
+                self.actionButton.setText("Play")
+                self.actionButton.setEnabled(True)
+            except Exception as e:
+                log.fatal("Exception stopping: {}".format(e))
 
         else:
             self.worker.core_state_query(1)
@@ -259,13 +262,11 @@ class PlayerThread(QThread):
 
         # go!
         while self.playing:
-            log.warn("PlayerThread FIXME") # FIXME
-
             image = self.thinker.dequeue_image()
-            if image:
-                log.debug("   ...dequeued image from disk: {}".format(image))
+            if image is not None:
                 moves = self.thinker.classify_image(image)
                 self.thinker.web_handler.output(moves)
+                self.print_console(" -> {}".format(moves))
 
             else:
                 time.sleep(.01)  # waiting 10 ms
@@ -324,48 +325,68 @@ class TensorPlay(object):
     def dequeue_image(self, remove=True):
         """Find next autoshot image, load and return it while removing it from disk"""
 
-        images = os.listdir(self.autoshots)
-        if images:
-            file = images[0]
-            log.debug("found file: {}".format(file))
-            
-            # load image into memory (performing minor processing) and remove from disk
-            img = self.prepare_image(os.path.join(self.autoshots, file))
+        # FIXME: we have a contention problem reading an image file from disk so quickly
+        #       and adding sync() calls in mupen64plus-core causes some bad stuttering,
+        #       so we'll need to work out a better way to pass the images through
 
-            if remove:
-                log.debug("removing image")
-                os.remove(file)
+        images = os.listdir(self.autoshots)
+        if not images:
+            return None
+
+        file = images[0]
+        log.debug("found file: {}".format(file))
+        time.sleep(.005) # 5 ms enough? FIXME
+
+        
+        # load image into memory (performing minor processing) and remove from disk
+        img = self.prepare_image(os.path.join(self.autoshots, file))
+
+        if remove:
+            log.debug("removing image")
+            try:
+                os.remove(os.path.join(self.autoshots, file))
+            except Exception as e:
+                log.fatal("Exception removing image: {}".format(e))
+
+        return img
 
     def prepare_image(self, img, makeBW=False):
         """ This resizes the image to a tensorflowish size """
         log.debug("prepare_image: {}".format(img))
-        pil_image = Image.open(img)                       # open img
-        log.debug("pil_image: {}".format(pil_image))
         try:
+            pil_image = Image.open(img)                       # open img
+            log.debug("pil_image: {}".format(pil_image))
             x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
         except Exception as e:
             log.fatal("Exception: {}".format(e))
+            return False
 
-        log.debug("x: {}".format(x))
+        #log.debug("   x: {}".format(x))
         numpy_img = np.array(x)                           # convert to numpy
-        log.debug("numpy_img: {}".format(numpy_img))
+        #log.debug("   numpy_img: {}".format(numpy_img))
         # if makeBW:
         #    numpy_img = self.make_BW(numpy_img)           # grayscale
         return numpy_img
 
-    def classify_image(self, Image):
+    def classify_image(self, vec):
         """Return labels matching the supplied image. Image should already be prepared."""
+        model = Model
         #joystick = _best_validation_1_
-        joystick = model.y.eval(feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
-        output = [
-            int(joystick[0] * 80),
-            int(joystick[1] * 80),
-            int(round(joystick[2])),
-            int(round(joystick[3])),
-            int(round(joystick[4])),
-        ]
+        try:
+            joystick = model.y.eval(session=self.session, feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
+            output = [
+                int(joystick[0] * 80),
+                int(joystick[1] * 80),
+                int(round(joystick[2])),
+                int(round(joystick[3])),
+                int(round(joystick[4])),
+            ]
 
-        return output
+            log.debug("   classification: {}".format(output))
+            return output
+        except Exception as e:
+            log.fatal("Exception evaluating model: {}".format(e))
+
 
     def forget(self):
         """Wrap it up (close session, clean up)"""
