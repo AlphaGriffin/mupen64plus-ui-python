@@ -99,7 +99,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.recorder = Recorder(self, self.worker)
         self.trainer = Trainer(self, self.worker)
         self.processing = Processing(self, self.worker)
-        self.player = Player(self, self.worker)
+        self.player = Player(self, self.worker, self.settings)
 
     def closeEvent(self, event):
         self.worker.quit()
