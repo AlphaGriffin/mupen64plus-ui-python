@@ -97,6 +97,7 @@ class Trainer(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
         super().__init__(parent)
+        self.parent = parent
         self.setWindowTitle('AG Trainer')
         self.selectorLabel.setText('Existing Save Folders:')
         self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -109,8 +110,8 @@ class Trainer(AGBlank):
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
         
-		# get references
-		self.trainer_thread = TfTraining(parent=self.parent)
+        # get references
+        self.trainer_thread = TfTraining(parent=self.parent)
 
         # booleans
         self.processing = False
@@ -288,7 +289,7 @@ class Trainer(AGBlank):
         # model_savePath, active_dataset, model_
         self.train_thread.setup(self.save_dir, self.active_dataset, Model)
         self.train_thread.run
-		self.print_console("Training Thread is running")
+        self.print_console("Training Thread is running")
         pass
         
     @pyqtSlot()
