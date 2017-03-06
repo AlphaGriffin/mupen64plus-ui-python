@@ -24,7 +24,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from PIL import ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
+#ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
 import ag.logging as log
 import m64py.tf.model
@@ -182,9 +182,23 @@ class Player(AGBlank):
  
     def prepareInputPlugin(self, load):  # FIXME NOT DONE
         """Pause ROM state, swap input plugin (load or unload), resume ROM"""
-        self.print_console("Switching to the mupen64plus-input-bot module")
+        if load:
+            self.print_console("Switching to the mupen64plus-input-bot module")
+        else:
+            self.print_console("Switching back to user input module")
+
         plugins = self.settings.qset.value("Path/Plugins", os.path.realpath(
             os.path.dirname(self.worker.plugin_files[0])))
+        log.debug("prepareInputPlugin(): {}".format(plugins))
+
+        # see also settings.py set_plugins()
+
+        # all this really necessary?
+        #self.parent.worker.plugins_shutdown()
+        #self.parent.worker.plugins_unload()
+        ###self.parent.worker.plugins_load(path)
+        #self.parent.worker.plugins_startup()
+
         log.warn("prepareInputPlugin(): NOT DONE")
 
     #
@@ -307,7 +321,7 @@ class TensorPlay(object):
 
         log.info("model successfully loaded")
 
-    def dequeue_image(self):
+    def dequeue_image(self, remove=True):
         """Find next autoshot image, load and return it while removing it from disk"""
 
         images = os.listdir(self.autoshots)
@@ -318,8 +332,9 @@ class TensorPlay(object):
             # load image into memory (performing minor processing) and remove from disk
             img = self.prepare_image(os.path.join(self.autoshots, file))
 
-            #log.debug("removing image")
-            #os.remove(file)
+            if remove:
+                log.debug("removing image")
+                os.remove(file)
 
     def prepare_image(self, img, makeBW=False):
         """ This resizes the image to a tensorflowish size """
