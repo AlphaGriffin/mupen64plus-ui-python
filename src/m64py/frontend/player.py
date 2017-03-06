@@ -24,7 +24,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from PIL import ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
+#ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
 import ag.logging as log
 import m64py.tf.model
@@ -49,11 +49,15 @@ class Player(AGBlank):
     # STEP 0 - default setup
     #
 
-    def __init__(self, parent, worker):
+    def __init__(self, parent, worker, settings):
+        """ @param parent   QDialog (mainwindow)
+            @param worker   Mupen worker object
+            @param settings Settings dialog instance from mainwindow """
         # basic set-up
         super().__init__(parent)
         self.setWorker(worker, 'model')
         self.setWindowTitle('AG Player')
+        self.settings = settings
         self.print_console("AlphaGriffin.com - AI Player")
 
         # AI machine player
@@ -128,7 +132,7 @@ class Player(AGBlank):
             self.actionButton.setEnabled(True)
             self.print_console("You Selected: {}".format(self.selected))
             self.print_console("")
-            self.print_console("    Hit  < Play >  when ready")
+            self.print_console("    Hit  << Play >>  when ready")
             self.print_console("")
             self.print_console(" (don't forget to load a ROM first and get to position)")
 
@@ -146,6 +150,7 @@ class Player(AGBlank):
         """Check game running state and if so start the play process"""
         if self.playing:
             self.ai_thread.playing = False  # this signals the thread to quit on its own, cleanly
+            self.prepareInputPlugin(False)
             self.print_console("Waiting for AI to settle down")
             log.debug("waiting for ai_thread to finish...")
             self.actionButton.setEnabled(False)
@@ -162,6 +167,7 @@ class Player(AGBlank):
 
             if loaded:
                 log.info("getting ready to play...")
+                self.prepareInputPlugin(True)
                 self.ai_thread.start()
                 self.print_console("AI player thread started")
 
@@ -174,6 +180,27 @@ class Player(AGBlank):
                 self.print_console('SORRY...')
                 self.print_console('    You must load a ROM first for me to play')
  
+    def prepareInputPlugin(self, load):  # FIXME NOT DONE
+        """Pause ROM state, swap input plugin (load or unload), resume ROM"""
+        if load:
+            self.print_console("Switching to the mupen64plus-input-bot module")
+        else:
+            self.print_console("Switching back to user input module")
+
+        plugins = self.settings.qset.value("Path/Plugins", os.path.realpath(
+            os.path.dirname(self.worker.plugin_files[0])))
+        log.debug("prepareInputPlugin(): {}".format(plugins))
+
+        # see also settings.py set_plugins()
+
+        # all this really necessary?
+        #self.parent.worker.plugins_shutdown()
+        #self.parent.worker.plugins_unload()
+        ###self.parent.worker.plugins_load(path)
+        #self.parent.worker.plugins_startup()
+
+        log.warn("prepareInputPlugin(): NOT DONE")
+
     #
     # STEP 3 - giving up already?
     #
@@ -237,10 +264,8 @@ class PlayerThread(QThread):
             image = self.thinker.dequeue_image()
             if image:
                 log.debug("   ...dequeued image from disk: {}".format(image))
-
-                ### FIXME: LEFT OFF HERE... ALMOST THERE!!!
-#                moves = self.thinker.classify_image(image)
-#                self.thinker.web_handler.output(moves)
+                moves = self.thinker.classify_image(image)
+                self.thinker.web_handler.output(moves)
 
             else:
                 time.sleep(.01)  # waiting 10 ms
@@ -296,7 +321,7 @@ class TensorPlay(object):
 
         log.info("model successfully loaded")
 
-    def dequeue_image(self):
+    def dequeue_image(self, remove=True):
         """Find next autoshot image, load and return it while removing it from disk"""
 
         images = os.listdir(self.autoshots)
@@ -307,8 +332,9 @@ class TensorPlay(object):
             # load image into memory (performing minor processing) and remove from disk
             img = self.prepare_image(os.path.join(self.autoshots, file))
 
-            #log.debug("removing image")
-            #os.remove(file)
+            if remove:
+                log.debug("removing image")
+                os.remove(file)
 
     def prepare_image(self, img, makeBW=False):
         """ This resizes the image to a tensorflowish size """
