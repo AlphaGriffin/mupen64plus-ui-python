@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QWidget
 from m64py.ui.agblank_ui import Ui_AGBlank
 from PyQt5.QtGui import QTextCursor
 import os
@@ -27,9 +27,10 @@ import ag.logging as log
 # You could add code here that all the interfaces that extend this class
 # would find useful.
 
-class AGBlank(QDialog, Ui_AGBlank):
+class AGBlank(QWidget, Ui_AGBlank):
     def __init__(self, parent=None):
-        QDialog.__init__(self, parent)
+        log.debug("AGBlank::__init__()")
+        QWidget.__init__(self, parent)
         self.setupUi(self)
         self.work_dir = None
 

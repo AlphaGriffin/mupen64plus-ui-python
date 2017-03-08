@@ -35,12 +35,8 @@ from m64py.frontend.glwidget import GLWidget
 from m64py.ui.mainwindow_ui import Ui_MainWindow
 from m64py.frontend.recentfiles import RecentFiles
 
-from m64py.frontend.agabout import AGAbout
-from m64py.frontend.plotter import Plotter
-from m64py.frontend.recorder import Recorder
-from m64py.frontend.trainer import Trainer
-from m64py.frontend.processing import Processing
-from m64py.frontend.player import Player
+#from m64py.frontend.plotter import Plotter
+from m64py.frontend.ai import AIDashboard
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Frontend main window"""
@@ -94,12 +90,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             raise Exception("Core/worker init failure. See other messages for details.")
         
         # Alpha Griffin Edition additions...
-        self.agabout = AGAbout(self)
-        self.plotter = Plotter(self)
-        self.recorder = Recorder(self, self.worker)
-        self.trainer = Trainer(self, self.worker)
-        self.processing = Processing(self, self.worker)
-        self.player = Player(self, self.worker, self.settings)
+#        self.plotter = Plotter(self)
+        self.ai = AIDashboard(self, self.worker, self.settings)
 
     def closeEvent(self, event):
         self.worker.quit()
@@ -501,31 +493,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_actionPad_Graph_triggered(self):
         """Shows plotter dialog."""
         self.plotter.show()
-    
-    @pyqtSlot()
-    def on_actionRecording_Console_triggered(self):
-        """Shows recorder dialog."""
-        self.recorder.show()
         
     @pyqtSlot()
-    def on_actionTraining_Console_triggered(self):
-        """Shows ML_Training dialog."""
-        self.trainer.show()
-    
-    @pyqtSlot()
-    def on_actionProcessing_Console_triggered(self):
-        """Shows ML_Training dialog."""
-        self.processing.show()
-    
-    @pyqtSlot()
-    def on_actionPlayer_Console_triggered(self):
-        """Shows ML_Player dialog."""
-        self.player.show()
-        
-    @pyqtSlot()
-    def on_actionAGAbout_triggered(self):
-        """Shows Alpha Griffin about dialog."""
-        self.agabout.show()
+    def on_actionAIDashboard_triggered(self):
+        """Shows Artificial Intelligence Dashboard dialog."""
+        self.ai.show()
 
 
 class View(QGraphicsView):

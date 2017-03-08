@@ -1,21 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>AGBlank</class>
- <widget class="QDialog" name="AGBlank">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>1057</width>
-    <height>476</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>AGBlank</string>
-  </property>
-  <property name="sizeGripEnabled">
-   <bool>true</bool>
-  </property>
+ <widget class="QWidget" name="AGBlank">
   <layout class="QHBoxLayout" name="horizontalLayout_4">
    <item>
     <layout class="QHBoxLayout" name="mainLayout" stretch="1,3">

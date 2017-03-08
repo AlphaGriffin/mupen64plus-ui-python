@@ -17,6 +17,9 @@
 from m64py.frontend.agblank import AGBlank
 from PyQt5.QtCore import pyqtSlot, QTimer
 import os, sys, pygame, time, shutil
+
+import ag.logging as log
+
 VERSION = sys.version
 
 # FIXME
@@ -65,6 +68,7 @@ class xpad(object):
 class Recorder(AGBlank):
     """AG_Recorder Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
+        log.debug("Recorder::__init__()")
         # init
         super().__init__(parent)
         self.setWorker(worker)   # get this from MUPEN core

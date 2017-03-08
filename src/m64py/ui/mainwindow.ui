@@ -57,7 +57,7 @@
      <x>0</x>
      <y>0</y>
      <width>594</width>
-     <height>19</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -92,6 +92,7 @@
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
     <addaction name="actionSaveScreenshot"/>
+    <addaction name="actionAIDashboard"/>
     <addaction name="separator"/>
     <addaction name="actionShowROMInfo"/>
     <addaction name="separator"/>
@@ -155,24 +156,11 @@
     <addaction name="separator"/>
     <addaction name="actionFullscreen"/>
    </widget>
-   <widget class="QMenu" name="menuAlphaGriffin">
-    <property name="title">
-     <string>Alpha&amp;Griffin</string>
-    </property>
-    <addaction name="actionPad_Graph"/>
-    <addaction name="actionRecording_Console"/>
-    <addaction name="actionProcessing_Console"/>
-    <addaction name="actionTraining_Console"/>
-    <addaction name="actionPlayer_Console"/>
-    <addaction name="separator"/>
-    <addaction name="actionAGAbout"/>
-   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEmulation"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuAlphaGriffin"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="styleSheet">
@@ -697,6 +685,24 @@ QStatusBar { margin:0px; }</string>
   <action name="actionPlayer_Console">
    <property name="text">
     <string>Player Console</string>
+   </property>
+  </action>
+  <action name="actionAIDashboard">
+   <property name="text">
+    <string>(&amp;AI,UI)+</string>
+   </property>
+   <property name="iconText">
+    <string>AI+UI</string>
+   </property>
+   <property name="toolTip">
+    <string>Artificial Intelligence Dashboard</string>
+   </property>
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/action_graphics.png</normaloff>:/icons/action_graphics.png</iconset>
+   </property>
+   <property name="shortcut">
+       <string>+</string>
    </property>
   </action>
  </widget>
