@@ -86,13 +86,13 @@
        <string>Visit AlphaGriffin.com</string>
       </property>
      </widget>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
         <x>360</x>
         <y>160</y>
-        <width>132</width>
-        <height>44</height>
+        <width>231</width>
+        <height>61</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="nameLayout">
@@ -112,13 +112,10 @@
        </item>
       </layout>
      </widget>
+     <zorder>layoutWidget</zorder>
      <zorder>logo</zorder>
      <zorder>title</zorder>
-     <zorder>erock</zorder>
-     <zorder>saw</zorder>
      <zorder>website</zorder>
-     <zorder>erock</zorder>
-     <zorder>erock</zorder>
     </widget>
    </item>
    <item>
