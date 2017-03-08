@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: SAW @ AlphaGriffin <Alphagriffin.com>
+# Author: lannocc @ AlphaGriffin <Alphagriffin.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,12 +17,9 @@
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QDialog
 from m64py.ui.ai_ui import Ui_AIDashboard
-import webbrowser
+import traceback
 
-from m64py.frontend.recorder import Recorder
-from m64py.frontend.trainer import Trainer
-from m64py.frontend.processing import Processing
-from m64py.frontend.player import Player
+from m64py.frontend.agerror import AGError
 
 import ag.logging as log
 
@@ -44,21 +41,41 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         self.worker = worker
         self.settings = settings
 
-        #log.debug("record: {}".format(self.record))
-        #self.record = Recorder(self.parent, self.worker)
-        #self.record.setObjectName("record")
+        try:
+            from m64py.frontend.recorder import Recorder
+            self.recorder = Recorder(self, self.worker)
+            self.tabster.addTab(self.recorder, "Record")
+        except Exception as e:
+            log.error("Failed to load Recorder: {}".format(e))
+            self.recorder = None
+            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Record")
 
-        self.recorder = Recorder(self, self.worker)
-        self.tabster.addTab(self.recorder, "Record")
+        try:
+            from m64py.frontend.trainer import Trainer
+            self.trainer = Trainer(self, self.worker)
+            self.tabster.addTab(self.trainer, "Train")
+        except Exception as e:
+            log.error("Failed to load Trainer: {}".format(e))
+            self.trainer = None
+            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Train")
 
-        self.trainer = Trainer(self, self.worker)
-        self.tabster.addTab(self.trainer, "Train")
+        try:
+            from m64py.frontend.processing import Processing
+            self.processing = Processing(self, self.worker)
+            self.tabster.addTab(self.processing, "Process")
+        except Exception as e:
+            log.error("Failed to load Processing: {}".format(e))
+            self.processing = None
+            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Process")
 
-        self.processing = Processing(self, self.worker)
-        self.tabster.addTab(self.processing, "Process")
-
-        self.player = Player(self, self.worker, self.settings)
-        self.tabster.addTab(self.player, "Play")
+        try:
+            from m64py.frontend.player import Player
+            self.player = Player(self, self.worker, self.settings)
+            self.tabster.addTab(self.player, "Play")
+        except Exception as e:
+            log.error("Failed to load Player: {}".format(e))
+            self.player = None
+            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Play")
 
 
 
@@ -67,10 +84,3 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         super().show()
         log.debug("AIDashboard::show()")
 
-        #self.record.show()
-        #self.retranslateUi(AIDashboard)
-
-#    @pyqtSlot()
-#    def on_website_clicked(self):
-#        """Open web browser to AlphaGriffin.com."""
-#        webbrowser.open('http://alphagriffin.com')
