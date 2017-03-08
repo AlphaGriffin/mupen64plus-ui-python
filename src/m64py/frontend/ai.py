@@ -51,15 +51,6 @@ class AIDashboard(QDialog, Ui_AIDashboard):
             self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Record")
 
         try:
-            from m64py.frontend.trainer import Trainer
-            self.trainer = Trainer(self, self.worker)
-            self.tabster.addTab(self.trainer, "Train")
-        except Exception as e:
-            log.error("Failed to load Trainer: {}".format(e))
-            self.trainer = None
-            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Train")
-
-        try:
             from m64py.frontend.processing import Processing
             self.processing = Processing(self, self.worker)
             self.tabster.addTab(self.processing, "Process")
@@ -67,6 +58,15 @@ class AIDashboard(QDialog, Ui_AIDashboard):
             log.error("Failed to load Processing: {}".format(e))
             self.processing = None
             self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Process")
+
+        try:
+            from m64py.frontend.trainer import Trainer
+            self.trainer = Trainer(self, self.worker)
+            self.tabster.addTab(self.trainer, "Train")
+        except Exception as e:
+            log.error("Failed to load Trainer: {}".format(e))
+            self.trainer = None
+            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Train")
 
         try:
             from m64py.frontend.player import Player
