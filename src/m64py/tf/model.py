@@ -19,7 +19,7 @@ x = tf.placeholder(tf.float32, shape=[None, IMG_H, IMG_W, 3])
 y_ = tf.placeholder(tf.float32, shape=[None, OUT_SHAPE])
 
 x_image = x
-
+print("MODEL - DEBUGS 1")
 #first convolutional layer
 W_conv1 = weight_variable([5, 5, 3, 24])
 b_conv1 = bias_variable([24])
@@ -58,6 +58,7 @@ h_conv5_flat = tf.reshape(h_conv5, [-1, 1152])
 h_fc1 = tf.nn.relu(tf.matmul(h_conv5_flat, W_fc1) + b_fc1)
 
 keep_prob = tf.placeholder(tf.float32)
+print("MODEL - DEBUGS 2")
 h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
 #FCL 2
@@ -89,3 +90,4 @@ W_fc5 = weight_variable([10, OUT_SHAPE])
 b_fc5 = bias_variable([OUT_SHAPE])
 
 y = tf.matmul(h_fc4_drop, W_fc5) + b_fc5
+print("MODEL - DEBUGS 4")

@@ -16,9 +16,8 @@ class mupenDataset(object):
     (2) make a kickass human readable printout for .rst and console
         
     """
-    def __init__(self, imgs, labels, options=None):
-        self.name                  = 'MUPEN64+'  
-        self.options               = options    
+    def __init__(self, imgs=None, labels=None, init=True):
+        self.name                  = 'MUPEN64+'
         self.imgs                  = imgs    # full path passed in
         self.labels                = labels  # full path passed in
         self.img_size              = None    # is not square
@@ -31,7 +30,7 @@ class mupenDataset(object):
         # Necessary Placeholders for working being done
         self._epochs_completed     = 0
         self._index_in_epoch       = 0
-        self._num_examples         = 0
+        self._num_examples         = 1
         
         # hacks
         self.trainer = self
@@ -40,8 +39,9 @@ class mupenDataset(object):
         self.msg = "Loading Numpy Dataset"
         self.msg += "Images: {} ".format(str(imgs))
         self.msg += "Labels: {} ".format(str(labels))
-        print(self.msg)
-        self.build_return()
+        # print(self.msg)
+        if init:
+            self.build_return()
         
     def build_return(self):
         """ This opens the files and does the label argmax for you"""
@@ -61,8 +61,8 @@ class mupenDataset(object):
         self.msg = "ALL: images.shape: {} labels.shape: {}".format(self._all_images_.shape, self._all_labels_.shape)
         #self.msg += "TRAIN: images.shape: {} labels.shape: {}".format(self.train_images.shape, self.train_labels.shape)
         #self.msg += "'TEST: images.shape: {} labels.shape: {}".format(self.test_images.shape, self.test_labels.shape)
-        print(self.msg)
-        #print("DEBUGS - data 2")
+        # print(self.msg)
+        # print("DEBUGS - data 2")
         
     def load(self, images, labels):
         """ Load 2 numpy objects as a set images, labels in: paths, out: np.arrays"""

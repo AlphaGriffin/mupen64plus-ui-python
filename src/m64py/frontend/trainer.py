@@ -16,12 +16,10 @@
 
 from m64py.frontend.agblank import AGBlank
 from m64py.tf.mupen import mupenDataset as Data
-import m64py.tf.model as Model
+import m64py.tf.model as model
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
-from glob import glob
 import os, sys
-import numpy as np
 import tensorflow as tf
 pyVERSION = sys.version
 tfVERSION = tf.__version__
@@ -45,48 +43,65 @@ Tensorflow Model Creation and Training SOFTWARE:
 
 
 class TfTraining(QThread):
-    def setup(self, model_savePath, active_dataset, model_):        
+    def setup(self, model_savePath, active_dataset):
         print("TF Version: {}\nModules loaded Properly!".format(tf.__version__))
-        print("Filename = {}\nFinal Layer: {}".format(model_savePath, model_.y))
+        print("FileName = {}\nFinal Layer: {}".format(model_savePath, model.y))
         
         self.model_savePath = model_savePath
         self.active_dataset = active_dataset
-        self.model_ = _MODEL_
+        # self.model_ = model_
+        self.session = tf.InteractiveSession()
+        print("finished setup")
 
-    def run(self, sess=None):
-        model = self.model_
+    def run(self):
+        print("start")
+        sess = self.session
+        # model = self.model_
         data = self.active_dataset
-        # Start session
-        if sess is None:
-            sess = tf.InteractiveSession()
-        self.session = sess
+        print("RUN - 1\n{}\n{}".format(model.y, data.msg))
+        # import m64py.tf.model as model
+        print("RUN - 2 Session Model Final Layer: {}".format(model.y_))
         # Learning Functions
         L2NormConst = 0.001
+        self.session.run(tf.global_variables_initializer())
         train_vars = tf.trainable_variables()
-        loss = tf.reduce_mean(tf.square(tf.subtract(model.y_, model.y))) + tf.add_n([tf.nn.l2_loss(v) for v in train_vars]) * L2NormConst
+        print("RUN - 3 train_vars: {}".format(train_vars))
+        cost = tf.square(tf.subtract(model.y_, model.y))
+        print("RUN - 4")
+        # trained_vars = tf.add_n([tf.nn.l2_loss(v) for v in train_vars])
+        print("RUN - 5")
+        loss = tf.reduce_mean(cost) * .01# + trained_vars * .01
+        print("RUN - 6")
         train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
-
-        sess.run(tf.global_variables_initializer())
-
+        print("RUN - 7")
+        # self.session.run(tf.global_variables_initializer())
+        print("RUN - 8")
         # Training loop variables
         epochs = 2
         batch_size = 50
         num_samples = data.num_examples
         step_size = int(num_samples / batch_size)
         loss_value = 0
+        print("RUN - 9 step_size: {}".format(step_size))
         for epoch in range(epochs):
+            print("im looping out bro! epoch in epochs: {}/{}".format(epoch, epochs))
             for i in range(step_size):
                 batch = data.next_batch(batch_size)
 
-                train_step.run(feed_dict={model.x: batch[0], model.y_: batch[1], model.keep_prob: 0.8})
+                train_step.run(sess=self.session, feed_dict={model.x: batch[0],
+                                                             model.y_: batch[1],
+                                                             model.keep_prob: 0.8})
 
-                if i%10 == 0:
-                  loss_value = loss.eval(feed_dict={model.x:batch[0], model.y_: batch[1], model.keep_prob: 1.0})
-                  print("epoch: %d step: %d loss: %g"%(epoch, epoch * batch_size + i, loss_value))
+                if i % 10 == 0:
+                    loss_value = loss.eval(sess=self.session, feed_dict={model.x: batch[0],
+                                                                         model.y_: batch[1],
+                                                                         model.keep_prob: 1.0})
+                    print("epoch: %d step: %d loss: %g"%(epoch, epoch * batch_size + i, loss_value))
 
         # Save the Model
         saver = tf.train.Saver(var_list={"{}".format(v): v for v in [tf.model_variables()]})
-        saver.save(sess, "{}.ckpt".format(self.model_savePath))
+        saver.save(sess, "{}".format(self.model_savePath))
+        print("SAVED! : {}".format(self.model_savePath))
         return loss_value
         
     def tfStop(self):
@@ -154,9 +169,8 @@ class Trainer(AGBlank):
             # import the dataset can opener
             self.print_console("Loading Dataset:\n\tImages{}\n\tLabels: {}".format(self.image_file,
                                                                                    self.label_file))
-            dataset_ = Data(self.image_file, self.label_file)
-            self.active_dataset = dataset_
-            self.print_console(dataset_.msg)
+            self.active_dataset = Data(self.image_file, self.label_file)
+            self.print_console(self.active_dataset.msg)
             return True
         else:
             "File Names  were no good..."
@@ -180,34 +194,43 @@ class Trainer(AGBlank):
         if not data:
             return False
         # self.print_console(data.msg)
-        self.active_dataset = data
+        # self.active_dataset = data
         self.actionButton.setEnabled(True)
         return True
 
     def train_network(self, iters=5):
-        model_ = model()
-        self.print_console(model.msg)
-        saveDir = os.path.join(self.root_dir, "model", self.currentGame)   
+        saveDir = os.path.join(self.root_dir, "model", self.currentGame)
+        model_fileName = "{}_playbackModel.ckpt".format(self.currentGame)
+
         if not os.path.isdir(saveDir):
             self.print_console("Creating folder: {}".format(saveDir))
             os.mkdir(saveDir)
+
         datasetIndex = len(os.listdir(saveDir))
         model_savePath = os.path.join(saveDir, "playbackModel_{}".format(datasetIndex))
+
         if not os.path.isdir(model_savePath):
-            self.print_console("Creating folder: {}".format(saveDir))
+            self.print_console("Creating folder: {}".format(model_savePath))
             os.mkdir(model_savePath)
-        model_fileName = "{}_playbackModel".format(self.currentGame)
+
+        model_fileName = os.path.join(model_savePath, model_fileName)
+        # start threading processes
+        print(self.active_dataset.msg)
+        self.trainer_thread.setup(model_fileName, self.active_dataset)
         self.print_console("#############################################")
         self.print_console("# Processing dataset to Playback Model")
         self.print_console("# Game Name: {}".format(self.currentGame))
         self.print_console("# Dataset Path: {}".format(model_savePath))
         self.print_console("# Number of Iterations to Train: {}".format(iters))
         self.print_console("#############################################")
-        filename = os.path.join(self.model_savePath, self.model_fileName)
-        self.train_loss = tf_training(filename, self.active_dataset, model_)
-        self.print_console("Completed Training! the AI now EXISTS\nTraining Loss: {}".format(self.train_loss))
-        self.print_console("Greetings Prof. Falcon," +
-                           "\tWould you like to play a game?")
+        try:
+            self.trainer_thread.start()
+            # self.print_console("Completed Training! the AI now EXISTS\nTraining Loss: {}".format(self.train_loss))
+            self.print_console("Greetings Prof. Falcon," +
+                               "\tWould you like to play a game?")
+
+        except Exception as e:
+            self.print_console("SHIT!... this is the error:\n{}\nSHIT!".format(e))
 
     """Selector FUNCTIONS"""
     def getSaves(self):
@@ -238,7 +261,7 @@ class Trainer(AGBlank):
         for x in self.selected:
             selection.append(x.text())
         select_string = ", ".join(x for x in selection)
-        self.input.setText(select_string)
+        self.input.setText("100")
         self.selection = selection
         
         # if we have picked a game
@@ -286,17 +309,14 @@ class Trainer(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Start Training the model"""
-        # model_savePath, active_dataset, model_
-        self.train_thread.setup(self.save_dir, self.active_dataset, Model)
-        self.train_thread.run
-        self.print_console("Training Thread is running")
+        iters = self.input.text()
+        self.train_network(iters=iters)
         pass
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
-        if self.select_data():
-            self.print_console("DEBUGS!")
         """Test Button for pressing broken parts"""
+        self.select_data()
         pass
          
     @pyqtSlot()
@@ -308,4 +328,4 @@ class Trainer(AGBlank):
         self.actionButton.setEnabled(False)
         
     @pyqtSlot()
-    def closeEvent(self,event=False): pass
+    def closeEvent(self, event=False): pass

@@ -28,6 +28,8 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
 import ag.logging as log
 import m64py.tf.model as Model
+import m64py.tf.build_network as Network
+from m64py.tf.mupen import mupenDataset as Data
 
 VERSION = sys.version
 
@@ -310,7 +312,14 @@ class TensorPlay(object):
 
         log.info("starting TensorFlow version {} session...".format(tf.__version__))
         self.session = tf.InteractiveSession()
-
+        #graphfile = os.path.join(folder, 'graph.pbtxt')
+        #log.debug("Graphfile:\n\t{}".format(graphfile))
+        #self.graph = tf.import_graph_def(graphfile,
+        #                            # return_elements=['data/inputs:0',
+        #                            #                  'output/network_activation:0',
+        #                            #                  'data/correct_outputs:0'],
+        #                               name='')
+        #log.debug("{}".format(self.graph))
         metafile = os.path.join(folder, 'alpha.griffin-0.meta')
         log.debug("   metafile: {}".format(metafile))
 
@@ -357,6 +366,7 @@ class TensorPlay(object):
             pil_image = Image.open(img)                       # open img
             log.debug("pil_image: {}".format(pil_image))
             x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
+            log.debug("pil_image resized: {}".format(x))
         except Exception as e:
             log.fatal("Exception: {}".format(e))
             return False
@@ -370,10 +380,13 @@ class TensorPlay(object):
 
     def classify_image(self, vec):
         """Return labels matching the supplied image. Image should already be prepared."""
-        model = Model
+
         #joystick = _best_validation_1_
         try:
-            joystick = model.y.eval(session=self.session, feed_dict={model.x: [vec], model.keep_prob: 1.0})[0]
+            model = Network.Build_Adv_Network(Data(init=False))
+            #with self.graph as tf.Graph:
+            joystick = model.x_image.eval(session=self.session, feed_dict={model.Input_Tensor_Images: [vec], model.keep_prob: 1.0}) # [0]
+            log.debug("{}".format(joystick))
             output = [
                 int(joystick[0] * 80),
                 int(joystick[1] * 80),

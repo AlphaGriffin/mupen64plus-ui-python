@@ -37,7 +37,7 @@ class AGBlank(QDialog, Ui_AGBlank):
         """Takes a String and prints to console"""
         self.console.moveCursor(QTextCursor.End)
         self.console.insertPlainText("{}\n".format(msg))
-        #print(msg)
+        print(msg)
         
     def setWorker(self, worker, work_dir=None):
         """Get Worker from main code and check the local Userdata folder"""
