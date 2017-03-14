@@ -37,7 +37,7 @@ VERSION = sys.version
 INTRO =\
 """
 ARTIFICIAL PLAYER:
-        FIXME
+     <-- Select your favorite model and click play!
 """.format(VERSION,)
 
 #
@@ -79,7 +79,7 @@ class Player(AGBlank):
         self.actionButton.setEnabled(False)
 
         # not using checkButton (yet)
-        self.checkButton.setEnabled(False)
+        self.checkButton.setEnabled(True)
        
         # status flags
         self.playing = False
@@ -87,7 +87,9 @@ class Player(AGBlank):
         self.selected = None
  
         # all set!
+        self.current_game = ""
         self.print_console(INTRO)
+        self.print_console(self.work_dir)
 
     #
     # STEP 1 - open window and pick a previously-trained model
@@ -108,7 +110,8 @@ class Player(AGBlank):
 
         log.debug("about to list files: {}".format(self.work_dir))
         try:
-            files = os.listdir(self.work_dir)
+            self.current_game = worker.core.rom_header.Name.decode().replace(" ", "_").lower()
+            files = os.listdir(os.path.join(self.work_dir, self.current_game))
             log.debug("files: {}".format(files))
 
             if files:
@@ -145,7 +148,8 @@ class Player(AGBlank):
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        log.warn("on_checkButton_clicked(): NOT IMPLEMENTED")  # FIXME?
+        log.warn("on_checkButton_clicked(): check_game_status")  # FIXME?
+        self.populateSelector()
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
@@ -309,27 +313,20 @@ class TensorPlay(object):
     def load_graph(self, folder):
         """Load the trained model from the given folder path"""
         log.debug("load_graph(): folder = {}".format(folder))
-
         log.info("starting TensorFlow version {} session...".format(tf.__version__))
-        self.session = tf.InteractiveSession()
-        #graphfile = os.path.join(folder, 'graph.pbtxt')
-        #log.debug("Graphfile:\n\t{}".format(graphfile))
-        #self.graph = tf.import_graph_def(graphfile,
-        #                            # return_elements=['data/inputs:0',
-        #                            #                  'output/network_activation:0',
-        #                            #                  'data/correct_outputs:0'],
-        #                               name='')
-        #log.debug("{}".format(self.graph))
-        metafile = os.path.join(folder, 'alpha.griffin-0.meta')
-        log.debug("   metafile: {}".format(metafile))
-
+        self.sess = tf.InteractiveSession()
+        new_saver = tf.train.import_meta_graph(os.path.join(folder, "Alpha.meta"))
         log.debug("   tf.train.import_meta_graph()...")
-        saver = tf.train.import_meta_graph(metafile)
+        new_saver.restore(sess, os.path.join(folder, "Alpha"))
 
-        log.debug("   saver.restore()...")
-        saver.restore(sess=self.session, save_path=metafile)
-
-        log.info("model successfully loaded")
+        self.x = tf.get_collection_ref('input')[0]
+        self.k = tf.get_collection_ref('keep_prob')[0]
+        self.y = tf.get_collection_ref('final_layer')[0]
+        log.info("model successfully Loaded: {}/Alpha.meta".format(folder))
+        # img = prepare_image(img)
+        # feed_dict = {x: [img], k: 1.0}
+        # classification = sess.run(y, feed_dict)
+        # return classification
 
     def dequeue_image(self, remove=True):
         """Find next autoshot image, load and return it while removing it from disk"""
@@ -383,9 +380,9 @@ class TensorPlay(object):
 
         #joystick = _best_validation_1_
         try:
-            model = Network.Build_Adv_Network(Data(init=False))
-            #with self.graph as tf.Graph:
-            joystick = model.x_image.eval(session=self.session, feed_dict={model.Input_Tensor_Images: [vec], model.keep_prob: 1.0}) # [0]
+
+            feed_dict = {self.x: [vec], self.k: 1.0}
+            joystick = self.sess.run(self.y, feed_dict)
             log.debug("{}".format(joystick))
             output = [
                 int(joystick[0] * 80),
