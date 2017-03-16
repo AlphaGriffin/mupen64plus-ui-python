@@ -269,6 +269,7 @@ class PlayerThread(QThread):
         # get ready...
         self.parent.print_console("Starting local HTTP server for AI input pass-through")
         self.start_server()
+        # FIXME: remove any files from screenshot folder automatically before we start?
         self.parent.print_console("Turning on autoshots")
         self.parent.worker.toggle_autoshots()
 
@@ -279,10 +280,13 @@ class PlayerThread(QThread):
         # go!
         while self.playing:
             image = self.thinker.dequeue_image()
-            if image is not None:
-                moves = self.thinker.classify_image(image)
-                self.thinker.web_handler.output(moves)
-                self.print_console(" -> {}".format(moves))
+            if image is not None and image is not False:
+                try:
+                    moves = self.thinker.classify_image(image)
+                    self.web_handler.output(moves)
+                    self.parent.print_console(" -> {}".format(moves))
+                except Exception as e:
+                    log.fatal("Exception trying to play: {}".format(e))
 
             else:
                 time.sleep(.01)  # waiting 10 ms
@@ -339,22 +343,28 @@ class TensorPlay(object):
         self.k = tf.get_collection_ref('keep_prob')[0]
         self.y = tf.get_collection_ref('final_layer')[0]
         debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
-        log.info("model successfully loaded")
         log.debug(debug)
-    def dequeue_image(self, remove=True):
+        log.info("model successfully loaded")
+
+    def dequeue_image(self, remove=False):
         """Find next autoshot image, load and return it while removing it from disk"""
 
         # FIXME: we have a contention problem reading an image file from disk so quickly
         #       and adding sync() calls in mupen64plus-core causes some bad stuttering,
         #       so we'll need to work out a better way to pass the images through
+        #   see HACK below
 
         images = os.listdir(self.autoshots)
         if not images:
             return None
 
+        # HACK: wait for 2 images before we do anything (thanks to ruckusist for the idea)
+        if len(images) < 2:
+            return None
+
         file = images[0]
         log.debug("found file: {}".format(file))
-        time.sleep(.005)  # 5 ms enough? FIXME
+        #time.sleep(.005)  # 5 ms enough? FIXME
 
         # load image into memory (performing minor processing) and remove from disk
         img = self.prepare_image(os.path.join(self.autoshots, file))
@@ -388,12 +398,13 @@ class TensorPlay(object):
 
     def classify_image(self, vec):
         """Return labels matching the supplied image. Image should already be prepared."""
-        model = Model
-        # joystick = _best_validation_1_
+        log.debug("classify_image()")
+
         try:
             feed_dict = {self.x: [vec], self.k: 1.0}
-            joystick = self.sess.run(self.y, feed_dict)
+            joystick = self.session.run(self.y, feed_dict)
             log.debug("{}".format(joystick))
+            joystick = joystick[0] # because an array of array is originally returned
             output = [
                 int(joystick[0] * 80),
                 int(joystick[1] * 80),
