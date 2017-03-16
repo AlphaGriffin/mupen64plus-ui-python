@@ -69,7 +69,7 @@ class AIDashboard(QDialog, Ui_AIDashboard):
             self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Train")
 
         try:
-            from m64py.frontend.player2 import Player
+            from m64py.frontend.player import Player
             self.player = Player(self, self.worker, self.settings)
             self.tabster.addTab(self.player, "Play")
         except Exception as e:

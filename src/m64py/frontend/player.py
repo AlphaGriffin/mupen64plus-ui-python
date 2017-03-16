@@ -15,30 +15,30 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtCore import pyqtSlot, QThread#, QTimer
+from PyQt5.QtCore import pyqtSlot, QThread  # , QTimer
 from PyQt5.QtWidgets import QAbstractItemView
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import os, sys, time #, shutil
-#from glob import glob as check
+import os, sys, time  # , shutil
+# from glob import glob as check
 import numpy as np
 import tensorflow as tf
 from PIL import Image
 from PIL import ImageFile
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
 import ag.logging as log
-import m64py.tf.model as Model
-import m64py.tf.build_network as Network
-from m64py.tf.mupen import mupenDataset as Data
+# import m64py.tf.model as Model
 
 VERSION = sys.version
 
 # FIXME
-INTRO =\
-"""
-ARTIFICIAL PLAYER:
-     <-- Select your favorite model and click play!
-""".format(VERSION,)
+INTRO = \
+    """
+    ARTIFICIAL PLAYER:
+            FIXME
+    """.format(VERSION, )
+
 
 #
 # USER INTERFACE
@@ -73,28 +73,26 @@ class Player(AGBlank):
         # using input as full selected path readout (read-only for now)
         self.inputLabel.setText('full selected path:')
         self.input.setEnabled(False)
- 
+
         # play button
         self.actionButton.setText('Play')
         self.actionButton.setEnabled(False)
 
         # not using checkButton (yet)
         self.checkButton.setEnabled(True)
-       
+
         # status flags
         self.playing = False
         self.serving = False
         self.selected = None
- 
+
         # all set!
-        self.current_game = ""
         self.print_console(INTRO)
-        self.print_console(self.work_dir)
 
     #
     # STEP 1 - open window and pick a previously-trained model
     #
-       
+
     def show(self):
         """Show this window"""
         super().show()
@@ -102,7 +100,7 @@ class Player(AGBlank):
         if not self.selector.isEnabled():
             self.populateSelector()
             self.selector.setEnabled(True)
-    
+
     def populateSelector(self):
         """This populates the model list"""
         log.debug("populateSelector()")
@@ -110,8 +108,7 @@ class Player(AGBlank):
 
         log.debug("about to list files: {}".format(self.work_dir))
         try:
-            self.current_game = worker.core.rom_header.Name.decode().replace(" ", "_").lower()
-            files = os.listdir(os.path.join(self.work_dir, self.current_game))
+            files = os.listdir(self.work_dir)
             log.debug("files: {}".format(files))
 
             if files:
@@ -123,16 +120,18 @@ class Player(AGBlank):
             msg = "model directory not found: {}".format(self.work_dir)
             log.error(msg)
             self.print_console(msg)
-         
+
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
         log.debug("on_selector_itemSelectionChanged()")
         self.selected = None;
 
-        selected = self.selector.selectedItems()
+        # selected = self.selector.selectedItems()
+        selected = "/home/eric/.local/share/mupen64plus/model"
         if len(selected) is 1:
             log.debug("got a selection")
             self.selected = selected[0].text();
+            # self.input.setText(os.path.join(self.work_dir, self.selected))
             self.input.setText(os.path.join(self.work_dir, self.selected))
             self.actionButton.setEnabled(True)
             self.print_console("You Selected: {}".format(self.selected))
@@ -148,8 +147,20 @@ class Player(AGBlank):
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        log.warn("on_checkButton_clicked(): check_game_status")  # FIXME?
-        self.populateSelector()
+        log.warn("on_checkButton_clicked(): NOT IMPLEMENTED")  # FIXME?
+        log.info("getting ready to play...")
+        selected = "/home/eric/.local/share/mupen64plus/model"
+        self.selected = selected;
+        self.input.setText(os.path.join(self.selected))
+        self.prepareInputPlugin(True)
+        self.ai_thread.start()
+        self.print_console("AI player thread started")
+
+        self.print_console("It may take a moment for TensorFlow startup...")
+        self.actionButton.setText('Stop')
+        self.actionButton.setEnabled(False)
+        self.playing = True
+
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
@@ -188,7 +199,7 @@ class Player(AGBlank):
             else:
                 self.print_console('SORRY...')
                 self.print_console('    You must load a ROM first for me to play')
- 
+
     def prepareInputPlugin(self, load):  # FIXME NOT DONE
         """Pause ROM state, swap input plugin (load or unload), resume ROM"""
         if load:
@@ -203,10 +214,10 @@ class Player(AGBlank):
         # see also settings.py set_plugins()
 
         # all this really necessary?
-        #self.parent.worker.plugins_shutdown()
-        #self.parent.worker.plugins_unload()
+        # self.parent.worker.plugins_shutdown()
+        # self.parent.worker.plugins_unload()
         ###self.parent.worker.plugins_load(path)
-        #self.parent.worker.plugins_startup()
+        # self.parent.worker.plugins_startup()
 
         log.warn("prepareInputPlugin(): NOT DONE")
 
@@ -228,7 +239,6 @@ class Player(AGBlank):
         super().hide()
 
 
-
 #
 # CORE FUNCTIONALITY
 #
@@ -240,7 +250,7 @@ class PlayerThread(QThread):
     def __init__(self, parent, thinker):
         log.debug("PlayerThread init: {}".format(thinker))
         super().__init__(parent)
-        
+
         self.parent = parent
         self.thinker = thinker
         self.model_path = None
@@ -251,7 +261,7 @@ class PlayerThread(QThread):
 
     def run(self):
         log.info("PlayerThread running");
- 
+
         # on your marks...
         self.model_path = self.parent.input.text()
         self.thinker.load_graph(self.model_path)
@@ -313,21 +323,24 @@ class TensorPlay(object):
     def load_graph(self, folder):
         """Load the trained model from the given folder path"""
         log.debug("load_graph(): folder = {}".format(folder))
-        log.info("starting TensorFlow version {} session...".format(tf.__version__))
-        self.sess = tf.InteractiveSession()
-        new_saver = tf.train.import_meta_graph(os.path.join(folder, "Alpha.meta"))
-        log.debug("   tf.train.import_meta_graph()...")
-        new_saver.restore(sess, os.path.join(folder, "Alpha"))
 
+        log.info("starting TensorFlow version {} session...".format(tf.__version__))
+        self.session = tf.InteractiveSession()
+        modelfile = os.path.join(folder, 'log_28/Alpha')
+        metafile = modelfile + ".meta"
+        log.debug("   metafile: {}".format(metafile))
+
+        log.debug("   tf.train.import_meta_graph()...")
+        saver = tf.train.import_meta_graph(metafile)
+
+        log.debug("   saver.restore()...")
+        saver.restore(sess=self.session, save_path=modelfile)
         self.x = tf.get_collection_ref('input')[0]
         self.k = tf.get_collection_ref('keep_prob')[0]
         self.y = tf.get_collection_ref('final_layer')[0]
-        log.info("model successfully Loaded: {}/Alpha.meta".format(folder))
-        # img = prepare_image(img)
-        # feed_dict = {x: [img], k: 1.0}
-        # classification = sess.run(y, feed_dict)
-        # return classification
-
+        debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
+        log.info("model successfully loaded")
+        log.debug(debug)
     def dequeue_image(self, remove=True):
         """Find next autoshot image, load and return it while removing it from disk"""
 
@@ -341,9 +354,8 @@ class TensorPlay(object):
 
         file = images[0]
         log.debug("found file: {}".format(file))
-        time.sleep(.005) # 5 ms enough? FIXME
+        time.sleep(.005)  # 5 ms enough? FIXME
 
-        
         # load image into memory (performing minor processing) and remove from disk
         img = self.prepare_image(os.path.join(self.autoshots, file))
 
@@ -360,27 +372,25 @@ class TensorPlay(object):
         """ This resizes the image to a tensorflowish size """
         log.debug("prepare_image: {}".format(img))
         try:
-            pil_image = Image.open(img)                       # open img
+            pil_image = Image.open(img)  # open img
             log.debug("pil_image: {}".format(pil_image))
             x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
-            log.debug("pil_image resized: {}".format(x))
         except Exception as e:
             log.fatal("Exception: {}".format(e))
             return False
 
-        #log.debug("   x: {}".format(x))
-        numpy_img = np.array(x)                           # convert to numpy
-        #log.debug("   numpy_img: {}".format(numpy_img))
+        # log.debug("   x: {}".format(x))
+        numpy_img = np.array(x)  # convert to numpy
+        # log.debug("   numpy_img: {}".format(numpy_img))
         # if makeBW:
         #    numpy_img = self.make_BW(numpy_img)           # grayscale
         return numpy_img
 
     def classify_image(self, vec):
         """Return labels matching the supplied image. Image should already be prepared."""
-
-        #joystick = _best_validation_1_
+        model = Model
+        # joystick = _best_validation_1_
         try:
-
             feed_dict = {self.x: [vec], self.k: 1.0}
             joystick = self.sess.run(self.y, feed_dict)
             log.debug("{}".format(joystick))
@@ -397,13 +407,11 @@ class TensorPlay(object):
         except Exception as e:
             log.fatal("Exception evaluating model: {}".format(e))
 
-
     def forget(self):
         """Wrap it up (close session, clean up)"""
         log.debug("closing TensorFlow session...")
         self.session.close()
         log.info("TensorFlow session closed")
-
 
 
 class ServerThread(QThread):
@@ -420,6 +428,7 @@ class ServerThread(QThread):
 
 class PlayerInputRequestHandler(BaseHTTPRequestHandler):
     """Request handler for httpserver that sends controller commands upon request from the input plugin"""
+
     def __init__(self):
         self.response_message = [0, 0, 0, 0, 0]
 
@@ -432,13 +441,13 @@ class PlayerInputRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         ### calibration
-#        output = [
-#            int(self.response_message[0] * 80),
-#            int(self.response_message[1] * 80),
-#            int(round(self.response_message[2])),
-#            int(round(self.response_message[3])),
-#            int(round(self.response_message[4])),
-#        ]
+        #        output = [
+        #            int(self.response_message[0] * 80),
+        #            int(self.response_message[1] * 80),
+        #            int(round(self.response_message[2])),
+        #            int(round(self.response_message[3])),
+        #            int(round(self.response_message[4])),
+        #        ]
 
         log.debug("    <<< GET >>> :AI: {}".format(str(output)))
 
@@ -449,4 +458,3 @@ class PlayerInputRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(self.response_message)  # this is the output to http here
 
         return True
-
