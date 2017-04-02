@@ -50,13 +50,29 @@ class xpad(object):
     def read(self):
         """ This is the call polled for the xpad data """
         pygame.event.pump()
+        # left stick
         L_x_axis = self.joystick.get_axis(0)
         L_y_axis = self.joystick.get_axis(1)
-        a_btn = self.joystick.get_button(1)
-        b_btn = self.joystick.get_button(2)
+        # need left stick click
+        # right stick
+        # R_x_axis = self.joystick.get_axis(2)
+        # R_y_axis = self.joystick.get_axis(3)
+        # need right stick click
+        # need d-pad
+
+        # game buttons
+        a_btn = self.joystick.get_button(1) ## HACKS!! THIS A HACK
+        b_btn = self.joystick.get_button(2) ## THESE buttons are re maped in the thing... /hack
+        # x_btn = self.joystick.get_button(2)
+        # y_btn = self.joystick.get_button(3)
         
         # top buttons
+        # lb = self.joystick.get_button(4)
         rb = self.joystick.get_button(5)
+
+        # need start / select
+
+        # need triggers /
         return [L_x_axis, L_y_axis, a_btn, b_btn, rb]
         
     def manual_override(self):
@@ -80,7 +96,7 @@ class Recorder(AGBlank):
         self.inputLabel.setText('Save to:')
         self.actionButton.setText('Record')
         self.actionButton.setEnabled(False)
-        self.checkButton.setEnabled(False)
+        self.checkButton.setEnabled(True)
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
         
@@ -146,10 +162,10 @@ class Recorder(AGBlank):
             outfile.close()
         self.print_console(y)
         
-    def setWorker(self, worker):
-        """Get Worker from main code and check the local Userdata folder"""
-        self.worker = worker
-        self.work_dir = self.worker.core.config.get_path("UserData")
+    #def setWorker(self, worker):
+    #    """Get Worker from main code and check the local Userdata folder"""
+    #    self.worker = worker
+    #    self.work_dir = self.worker.core.config.get_path("UserData")
         
     def getGame(self):
         """Check if game has been selected and set a dir if it has"""
@@ -269,7 +285,7 @@ class Recorder(AGBlank):
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        self.get_images()
+        self.check_game()
      
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self): pass
