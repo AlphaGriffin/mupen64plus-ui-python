@@ -93,6 +93,7 @@
     <addaction name="separator"/>
     <addaction name="actionSaveScreenshot"/>
     <addaction name="actionAIDashboard"/>
+    <addaction name="actionPad_Graph"/>
     <addaction name="separator"/>
     <addaction name="actionShowROMInfo"/>
     <addaction name="separator"/>
