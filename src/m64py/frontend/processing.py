@@ -191,10 +191,7 @@ class Processing(AGBlank):
         datasetIndex = len(os.listdir(saveDir))
         dataset_x = []
         dataset_y = []
-        datasetFilename_x = "_{}_dataset_{}_image.npy".format(
-                                            self.currentGame,datasetIndex)
-        datasetFilename_y = "_{}_dataset_{}_label.npy".format(
-                                            self.currentGame,datasetIndex)
+        datasetFilename = "{}_dataset_{}".format(self.currentGame,datasetIndex)
         self.print_console("#############################################")
         self.print_console("# Processing Game folders to dataset")
         self.print_console("# Game Name: {}".format(self.currentGame))
@@ -215,13 +212,14 @@ class Processing(AGBlank):
                 img = proc.prepare_image(os.path.join(current_path,image))
                 dataset_x.append(img)
         
-        self.print_console("# Step 3: Save files...\n\t{}\n\t{}".format(
-                           datasetFilename_x, datasetFilename_y))
+        self.print_console("# Step 3: Save files...\n\t{}.npz".format(datasetFilename))
         dataset_x = np.asarray(dataset_x)
         dataset_y = np.concatenate(dataset_y)
+        # super_set = [dataset_x, dataset_y]
         self.print_console("# To Dir:\t{}".format(saveDir))
-        np.save(os.path.join(saveDir, datasetFilename_x), dataset_x)
-        np.save(os.path.join(saveDir, datasetFilename_y), dataset_y)
+        # np.save(os.path.join(saveDir, datasetFilename_x), dataset_x)
+        # np.save(os.path.join(saveDir, datasetFilename_y), dataset_y)
+        np.savez(os.path.join(saveDir, datasetFilename), images=dataset_x, labels=dataset_y)
         self.print_console("# Finished preparing dataset")
         
     

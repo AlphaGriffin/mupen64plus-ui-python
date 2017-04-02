@@ -13,12 +13,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from m64py.frontend.agblank import AGBlank
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import os, sys
+# from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler
+import http.server
+import socketserver
+import sys
 import numpy as np
 from PIL import Image
 import tensorflow as tf
@@ -30,113 +33,7 @@ INTRO =\
 """ This is the AI Player
 """.format(VERSION,)
 
-class Prepare(object):
-    """ 
-    This will be used by both the Process and Playback Modules for conversion
-    of images for Tensorflow.
-    """
-    def __init__(self,options=None):
-        self.options = options
-                
-    def make_BW(self,rgb):
-        """ This is the "rec601 luma" algorithm to compute 8-bit greyscale """
-        return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
-    
-    def prepare_image(self, img, makeBW=False):
-        """ This resizes the image to a tensorflowish size """
-        pil_image = Image.open(img)                       # open img
-        x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
-        numpy_img = np.array(x)                           # convert to numpy 
-        if makeBW:  
-            numpy_img = self.make_BW(numpy_img)           # grayscale
-        return numpy_img
-        
-    def gamepadImageMatcher(self, path):
-        """
-        - SAW - matches gamepad csv data rows to images based on timestamps
-        Params: A path with timestamped pictures and a ti1estamped .csv of
-                different lenghs.
-        Returns: two arrays of matched length img, labels.
-        """
-                
-        # Open CSV for reading
-        csv_path = os.path.join(path, "data.csv")
-        csv_io = open(csv_path, 'r')
-        
-        # Convert to a true array
-        csv = []
-        for line in csv_io:
-            # Split the string into array and trim off any whitespace/newlines
-            csv.append([item.strip() for item in line.split(',')])
-        if not csv:
-            #print ("CSV HAS NO DATA")
-            return None, None
-            
-        # Get list of images in directory and sort it
-        all_files = os.listdir(path)
-        images = []
-        for filename in all_files:
-            if filename.endswith('.png'):
-                images.append(filename)
-        images = sorted(images)
-        
-        if not images:
-            #print ("FOUND NO IMAGES");
-            return None, None
-    
-        # We're going to build up 2 arrays of matching size:
-        keep_csv = []
-        keep_images = []
-    
-        # Prime the pump (queue)...
-        prev_line = csv.pop(0)
-        prev_csvtime = int(prev_line[0])
-    
-        while images:
-            imgfile = images[0]
-            # Get image time:
-            #     Cut off the "gamename-" from the front and the ".png"
-            hyphen = imgfile.rfind('-') # Get last index of '-'
-            if hyphen < 0:
-                break
-            imgtime = int(imgfile[hyphen+1:-4]) # cut it out!
-            lastKeptWasImage = False # Did we last keep an image, or a line?
-            if imgtime > prev_csvtime:
-                keep_images.append(imgfile)
-                del images[0]
-                lastKeptWasImage = True
-                
-                # We just kept an image, so we need to keep a
-                #corresponding input row too
-                while csv:
-                    line = csv.pop(0)
-                    csvtime = int(line[0])
-    
-                    if csvtime >= imgtime:
-                        # We overshot the input queue... ready to
-                        # keep the previous data line
-                        # truncate  the timestamp
-                        keep_csv.append(prev_line[1:]) 
-                        lastKeptWasImage = False
-    
-                        prev_line = line
-                        prev_csvtime = csvtime
-    
-                        if csvtime >= imgtime:
-                            break;
-    
-                    if not csv:
-                        if lastKeptWasImage:
-                            # truncate off the timestamp
-                            keep_csv.append(prev_line[1:]) 
-                        break
-    
-            else:
-                del images[0]
-        return keep_csv, keep_images
 
-        
-        
 class Player(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker, settings):
@@ -156,7 +53,7 @@ class Player(AGBlank):
 
         # load other classes
         self.server_thread = ServerThread(parent=self.parent)
-        self.web_handler = PlayerInputRequestHandler()
+        self.web_handler = Handler
 
         # booleans
         self.model_loaded = False
@@ -171,14 +68,11 @@ class Player(AGBlank):
         
         # Use the flows
         self.sess = False
-        self.process = Prepare()
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.root_dir = self.work_dir
         self.work_dir = os.path.join(self.work_dir, "model")
         self.getSaves()
-
-        
 
     def load_model(self):
         folder = self.gamePath
@@ -213,11 +107,21 @@ class Player(AGBlank):
     """ TEST FUNCTIONS """
     def start_server(self):
         log.debug("start_server()")
-        server = HTTPServer(('', 8321), self.web_handler)
+        socketserver.TCPServer(('', 8321), self.web_handler)
 
         log.debug("starting server thread")
-        self.server_thread.set_server(server)
-        self.server_thread.start()
+        try:
+            if self.server_thread.set_server(server):
+                self.server_thread.start()
+            else:
+                try:
+                    # try again... after a moment
+                    self.server_thread.start()
+                except:
+                    print("server not starting")
+        except Exception as e:
+            log.fatal("Server not starting: {}".format(e))
+            print("sucking...")
 
         self.print_console('Started httpserver on port 8321')
 
@@ -225,7 +129,6 @@ class Player(AGBlank):
         log.debug("stop_server")
         self.server_thread.stop()
         return True
-
 
     """ Selector FUNCTIONS """
     def getSaves(self):
@@ -330,7 +233,6 @@ class Player(AGBlank):
                 self.checkButton.setText('Stop Server')
                 self.serving = True
 
-         
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
         self.selected = self.selector.selectedItems()
@@ -346,45 +248,50 @@ class Player(AGBlank):
 class ServerThread(QThread):
     """Thread for running the web server"""
 
-    def set_server(self, server):
-        log.debug("set_server(): {}".format(server))
-        self.server = server
+    def set_server(self, server__):
+        self.server = server__
+        self.server_running = 1
+        log.debug("Server set in thread")
+        return True
 
     def run(self):
+        """Call to action the server_forever method"""
         log.debug("ServerThread run()")
-        self.server.serve_forever()
+        while self.server_running:
+            self.server.handle_request()
+            log.info("ServerThread is running")
 
-class PlayerInputRequestHandler(BaseHTTPRequestHandler):
-    """Request handler for httpserver that sends controller commands upon request from the input plugin"""
-    def __init__(self):
-        self.response_message = [0, 0, 0, 0, 0]
+    def stop(self):
+        log.debug("ServerThread run()")
+        self.server_running = 0
+        # this is not working :(
 
+class Handler(http.server.SimpleHTTPRequestHandler):
     def output(self, data):
         log.debug("   set response_message <- {}".format(data))
-        self.response_message = data
-
-    def log_message(self, format, *args):
-        pass
+        output = [
+                int(data[0] * 80),
+                int(data[1] * 80),
+                int(round(data[2])),
+                int(round(data[3])),
+                int(round(data[4])),
+            ]
+        self.response_message = output
 
     def do_GET(self):
-        ### calibration
-#        output = [
-#            int(self.response_message[0] * 80),
-#            int(self.response_message[1] * 80),
-#            int(round(self.response_message[2])),
-#            int(round(self.response_message[3])),
-#            int(round(self.response_message[4])),
-#        ]
-
-        log.debug("    <<< GET >>> :AI: {}".format(str(output)))
-
-        ### respond with action
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
+        # Construct a server response.
+        message = ""
+        try:
+            message = self.response_message
+        except:
+            message = "Hello Prof. Falken,\n\n\tWorld you like to play a game?"
+            pass
+        self.send_response(20)
+        self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(self.response_message)  # this is the output to http here
+        self.wfile.write(bytes(message, "utf8"))
+        return
 
-        return True
 
 class TensorPlay(object):
     """Actual connection to TensorFlow subsystem and image processing"""
@@ -392,7 +299,7 @@ class TensorPlay(object):
     def __init__(self, autoshots_path):
         log.debug("TensorPlay init: {}".format(autoshots_path))
 
-        self.session = None
+        self.sess = None
         self.autoshots = autoshots_path
 
     def load_graph(self, folder):
@@ -400,8 +307,9 @@ class TensorPlay(object):
         log.debug("load_graph(): folder = {}".format(folder))
         log.info("starting TensorFlow version {} session...".format(tf.__version__))
         self.sess = tf.InteractiveSession()
-        new_saver = tf.train.import_meta_graph(os.path.join(folder, "Alpha.meta"))
-        log.debug("   tf.train.import_meta_graph()...")
+        model_file = os.path.join(folder, "Alpha.meta")
+        new_saver = tf.train.import_meta_graph(model_file )
+        log.debug("Training this model: {}".format(model_file))
         new_saver.restore(sess, os.path.join(folder, "Alpha"))
 
         self.x = tf.get_collection_ref('input')[0]
@@ -461,10 +369,7 @@ class TensorPlay(object):
 
     def classify_image(self, vec):
         """Return labels matching the supplied image. Image should already be prepared."""
-
-        # joystick = _best_validation_1_
         try:
-
             feed_dict = {self.x: [vec], self.k: 1.0}
             joystick = self.sess.run(self.y, feed_dict)
             log.debug("{}".format(joystick))
@@ -475,9 +380,9 @@ class TensorPlay(object):
                 int(round(joystick[3])),
                 int(round(joystick[4])),
             ]
-
             log.debug("   classification: {}".format(output))
             return output
+
         except Exception as e:
             log.fatal("Exception evaluating model: {}".format(e))
 
