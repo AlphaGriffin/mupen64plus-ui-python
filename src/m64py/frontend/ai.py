@@ -37,6 +37,8 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
+        self.status.setText("Loading the interface...")
+
         self.parent = parent
         self.worker = worker
         self.settings = settings
@@ -77,10 +79,27 @@ class AIDashboard(QDialog, Ui_AIDashboard):
             self.player = None
             self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Play")
 
+        self.nextTabButton.setEnabled(True)
+        self.status.setText("Ready.")
 
 
     def show(self):
         """show this window"""
         super().show()
         log.debug("AIDashboard::show()")
+
+    @pyqtSlot()
+    def on_prevTabButton_clicked(self):
+        index = self.tabster.currentIndex()
+        self.tabster.setCurrentIndex(index-1)
+
+    @pyqtSlot()
+    def on_nextTabButton_clicked(self):
+        index = self.tabster.currentIndex()
+        self.tabster.setCurrentIndex(index+1)
+
+    @pyqtSlot(int)
+    def on_tabster_currentChanged(self, index):
+        self.prevTabButton.setEnabled(index > 0)
+        self.nextTabButton.setEnabled(index < self.tabster.count() - 1)
 
