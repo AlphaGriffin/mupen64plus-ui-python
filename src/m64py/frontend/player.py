@@ -24,6 +24,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from PIL import ImageFile
+import traceback
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
@@ -125,9 +126,11 @@ class Player(AGBlank):
 
         log.warn("prepareInputPlugin(): NOT DONE")
 
-    def start_server(self): pass
+    def start_server(self):
+        return self.ai_thread.start_server()
 
-    def stop_server(self): pass
+    def stop_server(self):
+        return self.ai_thread.stop_server()
 
     def start_playing(self): pass
 
@@ -257,7 +260,15 @@ class Player(AGBlank):
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        log.warn("on_checkButton_clicked(): Check Test")
+        log.debug("on_checkButton_clicked(): Check Test")
+        folder = os.path.join(self.gamePath, self.select_string)
+        self.ai_thread.load_n_check(folder)
+        log.debug("load_graph FINISHED!")
+
+        log.debug("starting server")
+
+
+        """
         if not self.model_loaded:
             # self.load_model()
             folder = os.path.join(self.gamePath, self.select_string)
@@ -277,6 +288,7 @@ class Player(AGBlank):
                 self.start_server()
                 self.checkButton.setText('Stop Server')
                 self.serving = True
+        """
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
@@ -338,19 +350,27 @@ class PlayerThread(QThread):
         self.model_path = None
         self.web_handler = PlayerInputRequestHandler()
         self.server_thread = ServerThread(parent=self.parent)
-
+        self.loaded_graph = False
         self.playing = True
+
+    def load_n_check(self, model_path):
+        if self.thinker.load_graph(model_path):
+            self.loaded_graph = True
+            return True
+        else:
+            return False
+
 
     def run(self):
         log.info("PlayerThread running");
 
         # on your marks...
-        self.model_path = self.parent.input.text()
-        self.thinker.load_graph(self.model_path)
+        # self.model_path = self.parent.input.text()
+        # self.thinker.load_graph(self.model_path)
 
         # get ready...
-        self.parent.print_console("Starting local HTTP server for AI input pass-through")
-        self.start_server()
+        # self.parent.print_console("Starting local HTTP server for AI input pass-through")
+        # self.start_server()
         # FIXME: remove any files from screenshot folder automatically before we start?
         self.parent.print_console("Turning on autoshots")
         self.parent.worker.toggle_autoshots()
@@ -406,38 +426,26 @@ class TensorPlay(object):
         self.session = None
         self.autoshots = autoshots_path
 
-    def load_graph(self, folder):
+    def load_graph(self, folder, game=None):
         """Load the trained model from the given folder path"""
         log.debug("load_graph(): folder = {}".format(folder))
-        """
-        log.info("starting TensorFlow version {} session...".format(tf.__version__))
-        Model_Name = "mupen64_mariokart64"
-        Meta_Name = Model_Name + ".meta"
-        # shut down and reload....
-        if self.session:
-            self.session.close()
-        # start fresh
-        self.session = tf.InteractiveSession("grpc://localhost:2222")
-        metafile = os.path.join(folder, Meta_Name)
-        log.debug("trying: {}".format(metafile))
-        new_saver = tf.train.import_meta_graph(metafile)
-        # modelfile = os.path.join(folder, self.select_string, "alphagriffin")
-        modelfile = os.path.join(folder, Model_Name)
-        log.debug("loading modelfile {}".format(modelfile))
-        new_saver.restore(self.sess, modelfile)
-        """
-        sess = tf.
-        new_path = "/pub/models/mupen64/mariokart64/outputmodel/mupen64_mariokart64"
-        meta_path = new_path + ".meta"
-        new_saver = tf.train.import_meta_graph(meta_path)
-        new_saver.restore(sess, new_path)
+        try:
+            self.session = tf.InteractiveSession()
+            # new_path = "/Users/lannocc/.local/share/mupen64plus/model/outputmodel12/mupen64_mariokart64"
+            new_path = os.path.join(folder, "mupen64_mariokart64")
+            meta_path = new_path + ".meta"
+            new_saver = tf.train.import_meta_graph(meta_path)
+            new_saver.restore(self.session, new_path)
+        except Exception as e:
+            log.fatal(traceback.format_exc())
 
+        # FIXME: we have a situation here: there was no summary attached to this graph... gotta redo it.. :(
         #self.x = tf.get_collection_ref('input')[0]
         #self.k = tf.get_collection_ref('keep_prob')[0]
         #self.y = tf.get_collection_ref('final_layer')[0]
         #debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
         #log.debug(debug)
-        #log.info("model successfully loaded")
+        log.info("model successfully loaded")
         return True
 
     def dequeue_image(self, remove=False):
