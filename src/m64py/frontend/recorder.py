@@ -29,20 +29,20 @@ Recording Console by: AlphaGriffin.com
 Built in python 3.5.2
 You are running: {0:2}
 Step 1: Start a ROM and get past the menus and into the game and pause it.
-Step 2: Press record and go on to enjoy your game.
-Step 3: When you exit out of the game the Recording will automatically stop.
-Or if you are racing, you can stop the recording between races and just click
+Step 2: press the check if game is running button for non-async...
+Step 3: Press record and go on to enjoy your game.
+Step 4: When you exit out of the game the Recording will automatically stop.
+step 5: Move on to the Processing Console.
+
+Notes: if you are racing, you can stop the recording between races and just click
 record again and keep playing. The more you contribute to the dataset, the
 better you can train your model.
-step 4: Move on to the Processing Console.
 """.format(VERSION)
 
 class xpad(object):
     """ This conversion comes from the orginal TKart Demo """
     def __init__(self,options=None):
         try:
-            pygame.init()
-            self.joystick = pygame.joystick.Joystick(0)
             self.joystick.init()
         except:
             print('unable to connect to Xbox Controller')
@@ -261,9 +261,6 @@ class Recorder(AGBlank):
         else:
             self.checkButton.setEnabled(True)
             self.print_console("No ScreenShots Saved")
-        
-    
-            
             
     def show(self):
         """ default show command """

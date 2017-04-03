@@ -63,12 +63,13 @@ class Player(AGBlank):
         self.print_console("AlphaGriffin.com - AI Player")
 
         # AI machine player
-        self.ai_thread = PlayerThread(self, TensorPlay(os.path.join(self.root_dir, 'screenshot')))
+        self.ai_player = TensorPlay(os.path.join(self.root_dir, 'screenshot'))
+        self.ai_thread = PlayerThread(self, self.ai_player)
         # AI will communicate with game through a WEBSERVER
 
         # model selector (don't populate it until window is actually shown)
         self.selectorLabel.setText('Existing Trained Models:')
-        self.selector.setEnabled(False)
+        self.selector.setEnabled(True)
 
         # using input as full selected path readout (read-only for now)
         self.inputLabel.setText('full selected path:')
@@ -78,128 +79,30 @@ class Player(AGBlank):
         self.actionButton.setText('Play')
         self.actionButton.setEnabled(False)
 
-        # not using checkButton (yet)
-        self.checkButton.setEnabled(True)
+        # check button starts server
+        self.checkButton.setEnabled(False)
 
         # status flags
         self.playing = False
         self.serving = False
         self.selected = None
+        self.model_loaded = False
+        self.selection = []
+        self.selectedRom = ""
+        self.gamePath = ""
+        self.selectingRom = True
+        self.sess = False
+        self.worker = worker
+        self.work_dir = self.worker.core.config.get_path("UserData")
+        self.root_dir = self.work_dir
+        self.work_dir = os.path.join(self.work_dir, "model")
 
         # all set!
         self.print_console(INTRO)
-
-    #
-    # STEP 1 - open window and pick a previously-trained model
-    #
-
-    def show(self):
-        """Show this window"""
-        super().show()
-
-        if not self.selector.isEnabled():
-            self.populateSelector()
-            self.selector.setEnabled(True)
-
-    def populateSelector(self):
-        """This populates the model list"""
-        log.debug("populateSelector()")
-        self.selector.clear()
-
-        log.debug("about to list files: {}".format(self.work_dir))
-        try:
-            files = os.listdir(self.work_dir)
-            log.debug("files: {}".format(files))
-
-            if files:
-                for model in files:
-                    self.selector.addItem(model)
-            else:
-                self.print_console("No models found: {}".format(self.work_dir))
-        except FileNotFoundError:
-            msg = "model directory not found: {}".format(self.work_dir)
-            log.error(msg)
-            self.print_console(msg)
-
-    @pyqtSlot()
-    def on_selector_itemSelectionChanged(self):
-        log.debug("on_selector_itemSelectionChanged()")
-        self.selected = None;
-
-        # selected = self.selector.selectedItems()
-        selected = "/home/eric/.local/share/mupen64plus/model"
-        if len(selected) is 1:
-            log.debug("got a selection")
-            self.selected = selected[0].text();
-            # self.input.setText(os.path.join(self.work_dir, self.selected))
-            self.input.setText(os.path.join(self.work_dir, self.selected))
-            self.actionButton.setEnabled(True)
-            self.print_console("You Selected: {}".format(self.selected))
-            self.print_console("")
-            self.print_console("    Hit  << Play >>  when ready")
-            self.print_console("")
-            self.print_console(" (don't forget to load a ROM first and get to position)")
-
-    #
-    # STEP 2 - start playing!
-    #
-
-    @pyqtSlot()
-    def on_checkButton_clicked(self):
-        """Test Button for pressing broken parts"""
-        log.warn("on_checkButton_clicked(): NOT IMPLEMENTED")  # FIXME?
-        log.info("getting ready to play...")
-        selected = "/home/eric/.local/share/mupen64plus/model"
-        self.selected = selected;
-        self.input.setText(os.path.join(self.selected))
-        self.prepareInputPlugin(True)
-        self.ai_thread.start()
-        self.print_console("AI player thread started")
-
-        self.print_console("It may take a moment for TensorFlow startup...")
-        self.actionButton.setText('Stop')
-        self.actionButton.setEnabled(False)
-        self.playing = True
+        self.getSaves()
 
 
-    @pyqtSlot()
-    def on_actionButton_clicked(self):
-        """Check game running state and if so start the play process"""
-        if self.playing:
-            self.ai_thread.playing = False  # this signals the thread to quit on its own, cleanly
-            self.prepareInputPlugin(False)
-            self.print_console("Waiting for AI to settle down")
-            log.debug("waiting for ai_thread to finish...")
-            self.actionButton.setEnabled(False)
-            try:
-                self.ai_thread.wait()
-                log.debug("thread out")
-                self.playing = False
-                self.actionButton.setText("Play")
-                self.actionButton.setEnabled(True)
-            except Exception as e:
-                log.fatal("Exception stopping: {}".format(e))
-
-        else:
-            self.worker.core_state_query(1)
-            log.debug("worker state: {}".format(self.worker.state))
-            loaded = self.worker.state in [2, 3]
-
-            if loaded:
-                log.info("getting ready to play...")
-                self.prepareInputPlugin(True)
-                self.ai_thread.start()
-                self.print_console("AI player thread started")
-
-                self.print_console("It may take a moment for TensorFlow startup...")
-                self.actionButton.setText('Stop')
-                self.actionButton.setEnabled(False)
-                self.playing = True
-
-            else:
-                self.print_console('SORRY...')
-                self.print_console('    You must load a ROM first for me to play')
-
+    # INPUT FUNCTIONS
     def prepareInputPlugin(self, load):  # FIXME NOT DONE
         """Pause ROM state, swap input plugin (load or unload), resume ROM"""
         if load:
@@ -221,10 +124,180 @@ class Player(AGBlank):
 
         log.warn("prepareInputPlugin(): NOT DONE")
 
-    #
-    # STEP 3 - giving up already?
-    #
+    def start_server(self): pass
 
+    def stop_server(self): pass
+
+    def start_playing(self): pass
+
+    def stop_playing(self): pass
+
+    # SELECTOR FUNCTIONS
+    def populateSelector(self):
+        """This populates the model list"""
+        log.debug("populateSelector()")
+        self.selector.clear()
+
+        log.debug("about to list files: {}".format(self.work_dir))
+        try:
+            files = os.listdir(self.work_dir)
+            log.debug("files: {}".format(files))
+
+            if files:
+                for model in files:
+                    self.selector.addItem(model)
+            else:
+                self.print_console("No models found: {}".format(self.work_dir))
+        except FileNotFoundError:
+            msg = "model directory not found: {}".format(self.work_dir)
+            log.error(msg)
+            self.print_console(msg)
+
+    def getSaves(self):
+        """
+        Creates a list of Games that have saves and resets the selected game.
+        """
+        try:
+            self.gamesList = os.listdir(self.work_dir)
+        except FileNotFoundError:
+            self.print_console("Source path does not exist: {}".format(
+                               self.work_dir))
+            return
+
+        self.selector.setEnabled(True)
+        self.selectingRom = True
+        self.checkButton.setEnabled(True)
+        self.currentGame = False
+        self.build_selector()
+
+    def selecterator(self):
+        """
+               Make sure the finiky QWidget List selector doesnt crash the system.
+               """
+        selection = []
+
+        # get self.selected from a global but this is a less good solution
+        for x in self.selected:
+            selection.append(x.text())
+        select_string = ", ".join(x for x in selection)
+        self.input.setText(select_string)
+        self.print_console("Selected: {}".format(select_string))
+        log.debug(select_string)
+        self.selection = selection
+        self.select_string = select_string
+
+        # if we have picked a game
+        if any(select_string in s for s in self.gamesList):
+            self.currentGame = self.selected[0].text()
+            self.selectingRom = False
+            x = os.path.join(self.work_dir, self.currentGame)
+            if os.path.isdir(x):
+                self.print_console("Game Save Dir: {}".format(x))
+                self.gamePath = x
+                self.build_selector(folder=x)
+                return
+
+        # if we need to go back and pick a different game
+        if len(select_string) is 3:
+            self.print_console("going back to choose another game!")
+            self.getSaves()
+            return
+
+        # if we have a list of Dirs to work on ...
+        self.actionButton.setEnabled(True)
+        # click on the button!!!
+
+    def build_selector(self, folder=""):
+        """This populates the save folder list"""
+        self.selector.clear()
+        if not self.selectingRom or folder is not "":
+            self.selector.addItem("../")
+            for i in sorted(os.listdir(folder)):
+                if '.' in i[-1]:
+                    pass
+                else:
+                    self.selector.addItem("{}".format(i))
+        else:
+            for i in self.gamesList:
+                self.selector.addItem("{}".format(i))
+        """then we need to be selecting folders to process"""
+
+    # SELECTOR CLICK
+    @pyqtSlot()
+    def on_selector_itemSelectionChanged(self):
+        log.debug("on_selector_itemSelectionChanged()")
+        self.selected = self.selector.selectedItems()
+        if len(self.selected) > 0:
+            self.selecterator()
+            return
+        self.actionButton.setEnabled(False)
+        """
+        self.selected = None;
+
+        # selected = self.selector.selectedItems()
+        selected = "/home/eric/.local/share/mupen64plus/model"
+        if len(selected) is 1:
+            log.debug("got a selection")
+            self.selected = selected[0].text();
+            # self.input.setText(os.path.join(self.work_dir, self.selected))
+            self.input.setText(os.path.join(self.work_dir, self.selected))
+            self.actionButton.setEnabled(True)
+            self.print_console("You Selected: {}".format(self.selected))
+            self.print_console("")
+            self.print_console("    Hit  << Play >>  when ready")
+            self.print_console("")
+            self.print_console(" (don't forget to load a ROM first and get to position)")
+        """
+
+    # BUTTON CLICKS
+    @pyqtSlot()
+    def on_checkButton_clicked(self):
+        """Test Button for pressing broken parts"""
+        log.warn("on_checkButton_clicked(): Check Test")
+        if not self.model_loaded:
+            # self.load_model()
+            folder = os.path.join(self.select_string, self.gamePath)
+
+            if self.ai_player.load_graph(folder):
+                self.checkButton.setText('Start Server')
+                self.actionButton.setEnabled(True)
+                self.model_loaded = True
+
+        else:
+            if self.serving:
+                self.stop_server()
+                self.checkButton.setText('Start Sever')
+                self.serving = False
+
+            else:
+                self.start_server()
+                self.checkButton.setText('Stop Server')
+                self.serving = True
+
+    @pyqtSlot()
+    def on_actionButton_clicked(self):
+        """Process the files"""
+        if not self.test_check and self.model_loaded is True:
+            test = self.tf_service()
+            if not test:
+                self.print_console("Cannot Proceed, Check your files!")
+                return False
+            self.print_console("Model Test Result: {}".format(test))
+            self.test_check = True
+            self.actionButton.setText('Start Game')
+        else:
+            self.print_console("Starting AI Player... Good Luck!")
+            self.start_playing()
+            self.actionButton.setText('Stop Game')
+
+        if self.playing_game:
+            self.print_console("Stoping AI Player... Good Job!")
+            self.stop_playing()
+        else:
+            self.print_console("You need to Test your Model")
+            self.actionButton.setText('Test Check')
+
+    # ON WINDOW EVENTS
     def hide(self):
         """Hide this window"""
 
@@ -238,6 +311,11 @@ class Player(AGBlank):
 
         super().hide()
 
+    def show(self):
+        """Show this window"""
+        super().show()
+
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 #
 # CORE FUNCTIONALITY
@@ -329,22 +407,28 @@ class TensorPlay(object):
         log.debug("load_graph(): folder = {}".format(folder))
 
         log.info("starting TensorFlow version {} session...".format(tf.__version__))
+        Model_Name = "Alpha"
+        Meta_Name = Model_Name + ".meta"
+        # shut down and reload....
+        if self.session:
+            self.session.close()
+        # start fresh
         self.session = tf.InteractiveSession()
-        modelfile = os.path.join(folder, 'log_28/Alpha')
-        metafile = modelfile + ".meta"
-        log.debug("   metafile: {}".format(metafile))
+        metafile = os.path.join(folder, "Alpha.meta")
+        log.debug("trying: {}".format(metafile))
+        new_saver = tf.train.import_meta_graph(metafile)
+        # modelfile = os.path.join(folder, self.select_string, "alphagriffin")
+        modelfile = os.path.join(folder, "Alpha")
+        log.debug("loading modelfile {}".format(modelfile))
+        new_saver.restore(self.sess, modelfile)
 
-        log.debug("   tf.train.import_meta_graph()...")
-        saver = tf.train.import_meta_graph(metafile)
-
-        log.debug("   saver.restore()...")
-        saver.restore(sess=self.session, save_path=modelfile)
         self.x = tf.get_collection_ref('input')[0]
         self.k = tf.get_collection_ref('keep_prob')[0]
         self.y = tf.get_collection_ref('final_layer')[0]
         debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
         log.debug(debug)
         log.info("model successfully loaded")
+        return True
 
     def dequeue_image(self, remove=False):
         """Find next autoshot image, load and return it while removing it from disk"""

@@ -13,15 +13,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import os, sys, datetime
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 from m64py.frontend.agblank import AGBlank
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 # from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler
 import http.server
 import socketserver
-import sys
 import numpy as np
 from PIL import Image
 import tensorflow as tf
@@ -32,6 +31,83 @@ VERSION = sys.version
 INTRO =\
 """ This is the AI Player
 """.format(VERSION,)
+
+class Sock_Server(object):
+    """A basic Socket Server"""
+    def __init__(self, host, port, service=None):
+        self.host = host
+        self.hostport = port
+        self.service = service
+        self.output = "0.0, 0.0, 0, 0, 0"
+
+    def set_output(self, output):
+        self.output = output
+
+    def handle(self, input_string):
+        """A String Parser / Decider"""
+        log.debug(input_string)
+
+        if input_string == 'services':
+            if self.service:
+                response = self.service.talk(input_string)
+                return response
+            else:
+                return "No Services Running"
+
+        if input_string == 'stop services':
+            if self.service:
+                return "Stoping Service - {}".format(str(self.service))
+            else:
+                return "No Services Running"
+
+        if input_string == 'find /path/':
+            return "found /path/to/thing"
+
+        else:
+            x = self.service.talk(input_string)
+            return x
+
+    def client_thread(self, conn, ip, port, mbs=4096):
+        """This is the manager of the input calls"""
+        input_from_client_bytes = conn.recv(mbs)
+        siz = sys.getsizeof(input_from_client_bytes)
+        if siz >= mbs:
+            log.info("The length of input is probably too long: {}".format(siz))
+
+        # decode input and strip the end of line
+        input_from_client = input_from_client_bytes.decode("utf8").rstrip()
+        res = self.handle(input_from_client)
+        log.info("Result of processing {} is: {}".format(input_from_client, res))
+
+        vysl = res.encode("utf8")  # encode the result string
+        conn.sendall(vysl)  # send it to client
+        conn.close()  # close connection
+        log.info('Connection ' + ip + ':' + port + " ended")
+
+    def start_server(self):
+        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # this is for easy starting/killing the app
+        soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        log.info('Socket created')
+
+        try:
+            soc.bind(("127.0.0.1", 12345))
+            log.info('Socket bind complete')
+        except socket.error as msg:
+            log.info('Bind failed. Error : ' + str(sys.exc_info()))
+            sys.exit()
+        soc.listen(10)
+        log.info('Socket now listening')
+        while True:
+            conn, addr = soc.accept()
+            ip, port = str(addr[0]), str(addr[1])
+            log.info("Connection Established - {}\n# -IP\t-{}:{}".format(datetime.now().isoformat(timespec='minutes'), ip, port))
+            try:
+                Thread(target=self.client_thread, args=(conn, ip, port)).start()
+            except Exception as e:
+                log.info("Terible error! {}".format(e))
+                traceback.print_exc()
+        soc.close()  # dont worry about it.
 
 
 class Player(AGBlank):
@@ -45,18 +121,21 @@ class Player(AGBlank):
         self.inputLabel.setText('Working Directory(s):')
         self.actionButton.setText('Process')
         self.actionButton.setEnabled(False)
-        self.actionButton.setText('Play')
+        self.actionButton.setText('Test Check')
         self.checkButton.setEnabled(True)
         self.checkButton.setText('Load Model')
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
 
         # load other classes
-        self.server_thread = ServerThread(parent=self.parent)
-        self.web_handler = Handler
+        # self.server_thread = ServerThread(parent=self.parent)
+        self.server_thread = 0
+        self.service = None
+        # self.web_handler = Handler
 
         # booleans
         self.model_loaded = False
+        self.test_check = False
         self.serving = False
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
@@ -85,10 +164,12 @@ class Player(AGBlank):
 
         try:
             self.sess = tf.InteractiveSession()
-            metafile = os.path.join(folder, self.select_string, "Alpha.meta")
+            # metafile = os.path.join(folder, self.select_string, "alphagriffin.meta")
+            metafile = os.path.join(folder, "alphagriffin.meta")
             print("trying: {}".format(metafile))
             new_saver = tf.train.import_meta_graph(metafile)
-            modelfile = os.path.join(folder, self.select_string, "Alpha")
+            # modelfile = os.path.join(folder, self.select_string, "alphagriffin")
+            modelfile = os.path.join(folder, "alphagriffin")
             log.debug("loading modelfile {}".format(modelfile))
             new_saver.restore(self.sess, modelfile)
 
@@ -101,12 +182,78 @@ class Player(AGBlank):
             log.info("model successfully Loaded: {}/Alpha.meta".format(folder))
             self.model_loaded = True
         except Exception as e:
-            self.print_console("This folder failed to produce a model. {}\nError: {}".format(folder, e))
+            self.print_console("This folder failed to produce a model, Trying again.... {}".format(folder))
+            try:
+                self.sess = tf.InteractiveSession()
+                # metafile = os.path.join(folder, self.select_string, "Alpha.meta")
+                metafile = os.path.join(folder, "Alpha.meta")
+                print("trying: {}".format(metafile))
+                new_saver = tf.train.import_meta_graph(metafile)
+                # modelfile = os.path.join(folder, self.select_string, "Alpha")
+                modelfile = os.path.join(folder, "Alpha")
+                log.debug("loading modelfile {}".format(modelfile))
+                new_saver.restore(self.sess, modelfile)
+
+                self.x = tf.get_collection_ref('input')[0]
+                self.k = tf.get_collection_ref('keep_prob')[0]
+                self.y = tf.get_collection_ref('final_layer')[0]
+                debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
+                log.debug(debug)
+                self.print_console(debug)
+                log.info("model successfully Loaded: {}/Alpha.meta".format(folder))
+                self.model_loaded = True
+            except Exception as f:
+                self.print_console("This folder failed to produce a model TWICE. {}\nError1: {}\nError2: {}".format(folder, e, f))
+
         pass
 
     """ TEST FUNCTIONS """
+
+    def prepare_image(self, img):
+        """ This resizes the image to a tensorflowish size """
+        log.debug("prepare_image: {}".format(img))
+        if os.path.isfile(img):
+            pass
+        else:
+            self.print_console("Test Image is not found.")
+            return False
+        pil_image = Image.open(img)  # open img
+        log.debug("pil_image: {}".format(pil_image))
+        x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
+        log.debug("pil_image resized: {}".format(x))
+        numpy_img = np.array(x)  # convert to numpy
+        log.debug("numpy img created: {}".format(numpy_img.shape[:]))
+        return numpy_img
+
+    def tf_service(self, img=None):
+        # get a photo
+        folder = self.gamePath
+        test_img = os.path.join(folder, 'test_set', 'mariokart64-testimg.png')
+        if img is None:
+            img = test_img
+        img = self.prepare_image(img)
+        feed_dict = {self.x: [img], self.k: 1.0}
+        self.print_console("Processing img: {}".format(img.shape[:]))
+        try:
+            classification = self.sess.run(self.y, feed_dict)
+            log.warn("recived answer: {}".format(classification))
+            self.print_console("Result Label: {}".format(classification))
+        except Exception as e:
+            self.print_console("Tensorflow is Busy or Broke...\nError: {}".format(e))
+            return False
+        return classification
+
+
     def start_server(self):
         log.debug("start_server()")
+        pid = os.getpid()
+        time = datetime.now().isoformat(timespec='minutes')
+        host = "127.0.0.1"
+        port = 12345
+        server = Sock_Server(host, port, pid)
+        self.server_thread = ServerThread(target=server.start_server).start()
+        self.serving = True
+        """
         socketserver.TCPServer(('', 8321), self.web_handler)
 
         log.debug("starting server thread")
@@ -122,6 +269,7 @@ class Player(AGBlank):
         except Exception as e:
             log.fatal("Server not starting: {}".format(e))
             print("sucking...")
+        """
 
         self.print_console('Started httpserver on port 8321')
 
@@ -130,6 +278,10 @@ class Player(AGBlank):
         self.server_thread.stop()
         return True
 
+    def start_playing(self): pass
+
+    def stop_playing(self):
+        pass
     """ Selector FUNCTIONS """
     def getSaves(self):
         """
@@ -212,7 +364,26 @@ class Player(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Process the files"""
-        self.processing_()
+        if not self.test_check and self.model_loaded is True:
+            test = self.tf_service()
+            if not test:
+                self.print_console("Cannot Proceed, Check your files!")
+                return False
+            self.print_console("Model Test Result: {}".format(test))
+            self.test_check = True
+            self.actionButton.setText('Start Game')
+        else:
+            self.print_console("Starting AI Player... Good Luck!")
+            self.start_playing()
+            self.actionButton.setText('Stop Game')
+
+        if self.playing_game:
+            self.print_console("Stoping AI Player... Good Job!")
+            self.stop_playing()
+        else:
+            self.print_console("You need to Test your Model")
+            self.actionButton.setText('Test Check')
+
         
     @pyqtSlot()
     def on_checkButton_clicked(self):
@@ -220,7 +391,10 @@ class Player(AGBlank):
         # reset and select game again...
         if not self.model_loaded:
             self.load_model()
-            self.checkButton.setText('Start Server')
+            if self.model_loaded:
+                self.checkButton.setText('Start Server')
+                self.actionButton.setEnabled(True)
+
 
         else:
             if self.serving:
@@ -265,6 +439,7 @@ class ServerThread(QThread):
         log.debug("ServerThread run()")
         self.server_running = 0
         # this is not working :(
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def output(self, data):
@@ -383,8 +558,11 @@ class TensorPlay(object):
             log.debug("   classification: {}".format(output))
             return output
 
+        #except Exception as e:
+        #    log.fatal("Exception evaluating model: {}".format(e))
         except Exception as e:
-            log.fatal("Exception evaluating model: {}".format(e))
+            print("\n\nFUCK!\n\n{}".format(e))
+            sys.exit(e)
 
     def forget(self):
         """Wrap it up (close session, clean up)"""
