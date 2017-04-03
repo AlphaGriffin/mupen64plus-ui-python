@@ -24,6 +24,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from PIL import ImageFile
+import traceback
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
@@ -256,7 +257,15 @@ class Player(AGBlank):
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        log.warn("on_checkButton_clicked(): Check Test")
+        log.debug("on_checkButton_clicked(): Check Test")
+
+        self.ai_player.load_graph('')
+        log.debug("load_graph FINISHED!")
+
+        log.debug("starting server")
+        self.start_server()
+
+        """
         if not self.model_loaded:
             # self.load_model()
             folder = os.path.join(self.gamePath, self.select_string)
@@ -276,6 +285,7 @@ class Player(AGBlank):
                 self.start_server()
                 self.checkButton.setText('Stop Server')
                 self.serving = True
+        """
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
@@ -425,10 +435,15 @@ class TensorPlay(object):
         log.debug("loading modelfile {}".format(modelfile))
         new_saver.restore(self.sess, modelfile)
         """
-        new_path = "/pub/models/mupen64/mariokart64/outputmodel/mupen64_mariokart64"
-        meta_path = new_path + ".meta"
-        new_saver = tf.train.import_meta_graph(meta_path)
-        new_saver.restore(sess, new_path)
+        try:
+            self.session = tf.InteractiveSession()
+            new_path = "/Users/lannocc/.local/share/mupen64plus/model/outputmodel12/mupen64_mariokart64"
+            meta_path = new_path + ".meta"
+            new_saver = tf.train.import_meta_graph(meta_path)
+            new_saver.restore(self.session, new_path)
+        except Exception as e:
+            log.fatal(traceback.format_exc())
+
 
         #self.x = tf.get_collection_ref('input')[0]
         #self.k = tf.get_collection_ref('keep_prob')[0]
