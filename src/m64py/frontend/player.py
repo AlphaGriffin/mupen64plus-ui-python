@@ -28,6 +28,7 @@ from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
 import ag.logging as log
+import tensorflow as tf
 # import m64py.tf.model as Model
 
 VERSION = sys.version
@@ -425,6 +426,7 @@ class TensorPlay(object):
         log.debug("loading modelfile {}".format(modelfile))
         new_saver.restore(self.sess, modelfile)
         """
+        sess = tf.
         new_path = "/pub/models/mupen64/mariokart64/outputmodel/mupen64_mariokart64"
         meta_path = new_path + ".meta"
         new_saver = tf.train.import_meta_graph(meta_path)
