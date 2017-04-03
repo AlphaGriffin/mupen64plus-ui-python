@@ -186,7 +186,7 @@ class Player(AGBlank):
         self.selection = selection
         self.select_string = select_string
 
-        # if we have picked a game
+        # if we havent picked a game
         if any(select_string in s for s in self.gamesList):
             self.currentGame = self.selected[0].text()
             self.selectingRom = False
@@ -206,6 +206,9 @@ class Player(AGBlank):
         # if we have a list of Dirs to work on ...
         self.actionButton.setEnabled(True)
         # click on the button!!!
+        # if we have a model here... just load it...
+        # current_path = os.path.join(self.gamePath, self.select_string)
+
 
     def build_selector(self, folder=""):
         """This populates the save folder list"""
@@ -256,7 +259,7 @@ class Player(AGBlank):
         log.warn("on_checkButton_clicked(): Check Test")
         if not self.model_loaded:
             # self.load_model()
-            folder = os.path.join(self.select_string, self.gamePath)
+            folder = os.path.join(self.gamePath, self.select_string)
 
             if self.ai_player.load_graph(folder):
                 self.checkButton.setText('Start Server')
@@ -405,29 +408,34 @@ class TensorPlay(object):
     def load_graph(self, folder):
         """Load the trained model from the given folder path"""
         log.debug("load_graph(): folder = {}".format(folder))
-
+        """
         log.info("starting TensorFlow version {} session...".format(tf.__version__))
-        Model_Name = "Alpha"
+        Model_Name = "mupen64_mariokart64"
         Meta_Name = Model_Name + ".meta"
         # shut down and reload....
         if self.session:
             self.session.close()
         # start fresh
-        self.session = tf.InteractiveSession()
-        metafile = os.path.join(folder, "Alpha.meta")
+        self.session = tf.InteractiveSession("grpc://localhost:2222")
+        metafile = os.path.join(folder, Meta_Name)
         log.debug("trying: {}".format(metafile))
         new_saver = tf.train.import_meta_graph(metafile)
         # modelfile = os.path.join(folder, self.select_string, "alphagriffin")
-        modelfile = os.path.join(folder, "Alpha")
+        modelfile = os.path.join(folder, Model_Name)
         log.debug("loading modelfile {}".format(modelfile))
         new_saver.restore(self.sess, modelfile)
+        """
+        new_path = "/pub/models/mupen64/mariokart64/outputmodel/mupen64_mariokart64"
+        meta_path = new_path + ".meta"
+        new_saver = tf.train.import_meta_graph(meta_path)
+        new_saver.restore(sess, new_path)
 
-        self.x = tf.get_collection_ref('input')[0]
-        self.k = tf.get_collection_ref('keep_prob')[0]
-        self.y = tf.get_collection_ref('final_layer')[0]
-        debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
-        log.debug(debug)
-        log.info("model successfully loaded")
+        #self.x = tf.get_collection_ref('input')[0]
+        #self.k = tf.get_collection_ref('keep_prob')[0]
+        #self.y = tf.get_collection_ref('final_layer')[0]
+        #debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
+        #log.debug(debug)
+        #log.info("model successfully loaded")
         return True
 
     def dequeue_image(self, remove=False):
@@ -501,6 +509,7 @@ class TensorPlay(object):
             return output
         except Exception as e:
             log.fatal("Exception evaluating model: {}".format(e))
+            pass
 
     def forget(self):
         """Wrap it up (close session, clean up)"""
