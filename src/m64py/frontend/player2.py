@@ -13,18 +13,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import os, sys, datetime
+import datetime
+import os
+import sys
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 from m64py.frontend.agblank import AGBlank
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 # from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler
 import http.server
-import socketserver
 import numpy as np
 from PIL import Image
 import tensorflow as tf
-from m64py.tf.mupen import mupenDataset
 import ag.logging as log
 VERSION = sys.version
 

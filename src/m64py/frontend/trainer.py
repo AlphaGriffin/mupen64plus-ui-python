@@ -14,13 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from m64py.frontend.agblank import AGBlank
-from m64py.tf.mupen import mupenDataset as Data
+import os
+import sys
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 import m64py.tf.model as model
+import tensorflow as tf
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
-import os, sys
-import tensorflow as tf
+
+from m64py.frontend.agblank import AGBlank
+from m64py.tf.data_prep import DataPrep
+from scratch.tf.mupen import mupenDataset as Data
+
 pyVERSION = sys.version
 tfVERSION = tf.__version__
 INTRO =\
@@ -43,66 +48,56 @@ Tensorflow Model Creation and Training SOFTWARE:
 
 
 class TfTraining(QThread):
-    def setup(self, model_savePath, active_dataset):
-        print("TF Version: {}\nModules loaded Properly!".format(tf.__version__))
-        print("FileName = {}\nFinal Layer: {}".format(model_savePath, model.y))
-        
-        self.model_savePath = model_savePath
-        self.active_dataset = active_dataset
-        # self.model_ = model_
-        self.session = tf.InteractiveSession()
-        print("finished setup")
+    def setup(self, model_path, dataset_path, iters):
+        sess = tf.InteractiveSession()
+        # open dataset path first.
+        self.dataset = DataPrep.load_npz(dataset_path)
+        self.session = DataPrep.load_model(sess, model_path)
+        self.model_path = model_path
+        self.iters = iters
+        # good
+        return True
 
     def run(self):
-        print("start")
-        sess = self.session
-        # model = self.model_
-        data = self.active_dataset
-        print("RUN - 1\n{}\n{}".format(model.y, data.msg))
-        # import m64py.tf.model as model
-        print("RUN - 2 Session Model Final Layer: {}".format(model.y_))
-        # Learning Functions
-        L2NormConst = 0.001
-        self.session.run(tf.global_variables_initializer())
-        train_vars = tf.trainable_variables()
-        print("RUN - 3 train_vars: {}".format(train_vars))
-        cost = tf.square(tf.subtract(model.y_, model.y))
-        print("RUN - 4")
-        # trained_vars = tf.add_n([tf.nn.l2_loss(v) for v in train_vars])
-        print("RUN - 5")
-        loss = tf.reduce_mean(cost) * .01# + trained_vars * .01
-        print("RUN - 6")
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
-        print("RUN - 7")
-        # self.session.run(tf.global_variables_initializer())
-        print("RUN - 8")
+        x = tf.get_collection('x_image')[0]
+        print(x.name)
+        y = tf.get_collection('y')[0]
+        print(y.name)
+        y_ = tf.get_collection('y_')[0]
+        print(y.name)
+        keep_prob = tf.get_collection('keep_prob')[0]
+        print(keep_prob.name)
+        loss = tf.get_collection('loss')[0]
+        print(loss.name)
+        train = tf.get_collection('train_op')[0]
+        print(train.name)
+        learn = tf.get_collection('learn_rate')[0]
+        print(learn.name)
+        global_step = tf.get_collection_ref('global_step')[0]
+        print(global_step.name)
+        init_op = tf.get_collection_ref('init_op')[0]
+        print(init_op.name)
+        merged = tf.get_collection_ref('merged')[0]
+        print(merged.name)
+
+        # Need a Saver and a Writer
+        saver = tf.train.Saver()
+        writer = tf.summary.FileWriter(self.model_path)
+
         # Training loop variables
-        epochs = 2
         batch_size = 50
-        num_samples = data.num_examples
-        step_size = int(num_samples / batch_size)
-        loss_value = 0
-        print("RUN - 9 step_size: {}".format(step_size))
-        for epoch in range(epochs):
-            print("im looping out bro! epoch in epochs: {}/{}".format(epoch, epochs))
-            for i in range(step_size):
-                batch = data.next_batch(batch_size)
+        iters = 100
+        for i in range(iters):
+            batch = data.next_batch(batch_size)
+            feed_dict = {x: batch[0],
+                         y_: batch[1],
+                         keep_prob: 0.8}
+            sess.run(train)
+            g = sess.run(global_step)
 
-                train_step.run(sess=self.session, feed_dict={model.x: batch[0],
-                                                             model.y_: batch[1],
-                                                             model.keep_prob: 0.8})
-
-                if i % 10 == 0:
-                    loss_value = loss.eval(sess=self.session, feed_dict={model.x: batch[0],
-                                                                         model.y_: batch[1],
-                                                                         model.keep_prob: 1.0})
-                    print("epoch: %d step: %d loss: %g"%(epoch, epoch * batch_size + i, loss_value))
-
-        # Save the Model
-        saver = tf.train.Saver(var_list={"{}".format(v): v for v in [tf.model_variables()]})
-        saver.save(sess, "{}".format(self.model_savePath))
-        print("SAVED! : {}".format(self.model_savePath))
-        return loss_value
+            if i % int(iters/10) == 0:
+                saver.save(sess, self.model_path, global_step)
+                writer.add_summary(summary, int(g+i))
         
     def tfStop(self):
         self.session.close()
@@ -144,7 +139,9 @@ class Trainer(AGBlank):
         self.root_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.root_dir, "datasets")
         self.save_dir = os.path.join(self.root_dir, "model")
-        
+
+
+        # Startup Processes
         self.getSaves()
 
     """TEST FUNCTIONS"""
@@ -188,15 +185,34 @@ class Trainer(AGBlank):
         * save again and confim
         """
         files = self.selection
-        loadir = os.path.join(self.root_dir, "datasets", self.currentGame)
+        loaddir = os.path.join(self.root_dir, "datasets", self.currentGame)
 
-        data = self.load_dataset(loadir, files)
+        # data = self.load_dataset(loadir, files)
         if not data:
             return False
-        # self.print_console(data.msg)
-        # self.active_dataset = data
+        self.print_console("Selected {} as Training Data Path".format(loaddir))
+        self.active_dataset = loaddir
         self.actionButton.setEnabled(True)
         return True
+
+    def build_new_network(self):
+        saveDir = os.path.join(self.root_dir, "model", self.currentGame)
+        model_fileName = "{}.tfmupen".format(self.currentGame)
+        full_path = os.path.join(saveDir, model_fileName)
+        if os.path.isdir(saveDir):
+            self.print_console("A Model Already Exists for this game: {}".format(saveDir))
+            # TODO: do you want to delete it and make a new one?
+            return full_path
+        else:
+            self.print_console("Creating folder: {}".format(saveDir))
+            os.mkdir(saveDir)
+            with tf.Session as sess:
+                from m64py.tf.build_network import *
+
+
+
+
+
 
     def train_network(self, iters=5):
         saveDir = os.path.join(self.root_dir, "model", self.currentGame)
@@ -216,21 +232,24 @@ class Trainer(AGBlank):
         model_fileName = os.path.join(model_savePath, model_fileName)
         # start threading processes
         print(self.active_dataset.msg)
-        self.trainer_thread.setup(model_fileName, self.active_dataset)
+        self.trainer_thread.setup(model_fileName, self.active_dataset, iters)
         self.print_console("#############################################")
         self.print_console("# Processing dataset to Playback Model")
         self.print_console("# Game Name: {}".format(self.currentGame))
         self.print_console("# Dataset Path: {}".format(model_savePath))
         self.print_console("# Number of Iterations to Train: {}".format(iters))
-        self.print_console("#############################################")
         try:
             self.trainer_thread.start()
-            # self.print_console("Completed Training! the AI now EXISTS\nTraining Loss: {}".format(self.train_loss))
             self.print_console("Greetings Prof. Falcon," +
                                "\tWould you like to play a game?")
 
         except Exception as e:
             self.print_console("SHIT!... this is the error:\n{}\nSHIT!".format(e))
+
+        finally:
+            self.print_console("# Finished Training Model!")
+            self.print_console("#############################################")
+
 
     """Selector FUNCTIONS"""
     def getSaves(self):
