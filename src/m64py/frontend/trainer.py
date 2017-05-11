@@ -208,8 +208,8 @@ class Trainer(AGBlank):
         # writer = tf.summary.FileWriter(self.model_path)
         self.print_console("All variables loaded")
 
-        iters = 100
-        for i in range(iters):
+        # iters = 100
+        for i in range(100):
             batch = self.data_prep.next_batch(100)
             self.print_console("Got batch for iter {}".format(i))
             feed_dict = {x: batch[0],
