@@ -218,10 +218,13 @@ class Trainer(AGBlank):
             sess.run(train, feed_dict=feed_dict)
             g = sess.run(global_step)
             self.print_console("THIS IS WORKING!!! {}".format(g))
+            if i % 10:
+                new_saver.save(sess, self.model_path, global_step)
+                 self.print_console("this is SAVING!!!")
             # if i % int(iters/10) == 0:
             #    new_saver.save(sess, self.model_path, global_step)
             #    # writer.add_summary(summary, int(g+i))
-            #    self.print_console("this is SAVING!!!")
+            #
 
 
         #x = self.trainer_thread.setup(model_path, self.active_dataset, iters)
