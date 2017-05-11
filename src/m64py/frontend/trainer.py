@@ -220,7 +220,7 @@ class Trainer(AGBlank):
             self.print_console("THIS IS WORKING!!! {}".format(g))
             if i % 10:
                 new_saver.save(sess, self.model_path, global_step)
-                 self.print_console("this is SAVING!!!")
+                self.print_console("this is SAVING!!!")
             # if i % int(iters/10) == 0:
             #    new_saver.save(sess, self.model_path, global_step)
             #    # writer.add_summary(summary, int(g+i))
