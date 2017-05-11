@@ -47,8 +47,10 @@ Tensorflow Model Creation and Training SOFTWARE:
 
 
 class TfTraining(QThread):
-    def setup(self, model_path, dataset_path, iters):
+    def setup(self, model_path, dataset, iters):
 
+        self.model_path = model_path
+        self.dataset = dataset
         sess = tf.InteractiveSession()
         checkpoint_file = tf.train.latest_checkpoint(model_path)
         print(checkpoint_file)
@@ -66,33 +68,18 @@ class TfTraining(QThread):
 
     def run(self):
         x = tf.get_collection('x_image')[0]
-        print(x.name)
         y = tf.get_collection('y')[0]
-        print(y.name)
         y_ = tf.get_collection('y_')[0]
-        print(y.name)
         keep_prob = tf.get_collection('keep_prob')[0]
-        print(keep_prob.name)
         loss = tf.get_collection('loss')[0]
-        print(loss.name)
         train = tf.get_collection('train_op')[0]
-        print(train.name)
         learn = tf.get_collection('learn_rate')[0]
-        print(learn.name)
         global_step = tf.get_collection_ref('global_step')[0]
-        print(global_step.name)
-        init_op = tf.get_collection_ref('init_op')[0]
-        print(init_op.name)
-        merged = tf.get_collection_ref('merged')[0]
-        print(merged.name)
-
-        # Need a Saver and a Writer
-        saver = tf.train.Saver()
         writer = tf.summary.FileWriter(self.model_path)
 
         # Training loop variables
         batch_size = 50
-        iters = 100
+        iters = 5
         for i in range(iters):
             batch = data.next_batch(batch_size)
             feed_dict = {x: batch[0],
@@ -196,6 +183,7 @@ class Trainer(AGBlank):
         self.print_console("this is working!")
 
     def train_network(self, iters=5):
+
         saveDir = os.path.join(self.root_dir, "model", self.currentGame)
         model_fileName = "{}Model".format(self.currentGame)
         model_path = os.path.join(saveDir, model_fileName)
@@ -207,8 +195,35 @@ class Trainer(AGBlank):
         print("found metagraph")
         sess.run(tf.global_variables_initializer())
         print("init those variables")
-        new_saver.restore(self.sess, checkpoint_file)
+        new_saver.restore(sess, checkpoint_file)
         self.print_console("this is working!")
+        x = tf.get_collection('x_image')[0]
+        # y = tf.get_collection('y')[0]
+        y_ = tf.get_collection('y_')[0]
+        keep_prob = tf.get_collection('keep_prob')[0]
+        # loss = tf.get_collection('loss')[0]
+        train = tf.get_collection('train_op')[0]
+        # learn = tf.get_collection('learn_rate')[0]
+        global_step = tf.get_collection_ref('global_step')[0]
+        # writer = tf.summary.FileWriter(self.model_path)
+        self.print_console("All variables loaded")
+
+        iters = 100
+        for i in range(iters):
+            batch = self.data_prep.next_batch(100)
+
+            feed_dict = {x: batch[0],
+                         y_: batch[1],
+                         keep_prob: 0.8}
+            sess.run(train, feed_dict)
+            g = sess.run(global_step)
+            self.print_console("THIS IS WORKING!!! {}".format(g))
+            if i % int(iters/10) == 0:
+                new_saver.save(sess, self.model_path, global_step)
+                # writer.add_summary(summary, int(g+i))
+                self.print_console("this is SAVING!!!")
+
+
         #x = self.trainer_thread.setup(model_path, self.active_dataset, iters)
         #self.print_console("Previous optimization: {}".format(x))
         #self.print_console("#############################################")
