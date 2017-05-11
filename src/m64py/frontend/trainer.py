@@ -211,17 +211,17 @@ class Trainer(AGBlank):
         # iters = 100
         for i in range(100):
             batch = self.data_prep.next_batch(100)
-            self.print_console("Got batch for iter {}".format(i))
+            self.print_console("Got batch for iter {}".format(i+1))
             feed_dict = {x: batch[0],
                          y_: batch[1],
                          keep_prob: 0.8}
             sess.run(train, feed_dict=feed_dict)
             g = sess.run(global_step)
             self.print_console("THIS IS WORKING!!! {}".format(g))
-            if i % int(iters/10) == 0:
-                new_saver.save(sess, self.model_path, global_step)
-                # writer.add_summary(summary, int(g+i))
-                self.print_console("this is SAVING!!!")
+            # if i % int(iters/10) == 0:
+            #    new_saver.save(sess, self.model_path, global_step)
+            #    # writer.add_summary(summary, int(g+i))
+            #    self.print_console("this is SAVING!!!")
 
 
         #x = self.trainer_thread.setup(model_path, self.active_dataset, iters)
