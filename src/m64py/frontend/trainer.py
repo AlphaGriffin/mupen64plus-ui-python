@@ -21,14 +21,14 @@ import numpy as np
 import tensorflow as tf
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
-
 from m64py.frontend.agblank import AGBlank
 from m64py.tf.data_prep import DataPrep
 from m64py.tf.build_network import MupenNetwork
 pyVERSION = sys.version
 tfVERSION = tf.__version__
-INTRO =\
-"""
+
+INTRO = """This is a test.
+
 Tensorflow Model Creation and Training SOFTWARE:
     Python Version: {}
     Tensorflow Version: {}
@@ -41,8 +41,6 @@ Tensorflow Model Creation and Training SOFTWARE:
     Step 3  - Then either (1) Load and Optimize your existing model or
     (2) take the model to Alphagriffin.com or your own AWS for further
     optimization.
-
-
 """.format(pyVERSION, tfVERSION)
 
 
@@ -97,8 +95,10 @@ class TfTraining(QThread):
 
 
 class Trainer(AGBlank):
-    """AG_Trainer Widget of MuPen64 Python Ui"""
+    """AG_Trainer Widget of MuPen64 Python Ui."""
+
     def __init__(self, parent, worker):
+        """Init Stuff."""
         super().__init__(parent)
         self.parent = parent
         self.setWindowTitle('AG Trainer')
@@ -143,7 +143,8 @@ class Trainer(AGBlank):
     """TEST FUNCTIONS"""
 
     def select_data(self):
-        """
+        """Select the data.
+
         This has 3 steps
         -----------------
         * load numpy files and create a dataset
@@ -154,7 +155,8 @@ class Trainer(AGBlank):
         * save again and confim
         """
         files = self.selection[0]
-        dataset = os.path.join(self.root_dir, "datasets", self.currentGame, files)
+        dataset = os.path.join(
+            self.root_dir, "datasets", self.currentGame, files)
         self.print_console("Selected {} as Training Data Path".format(dataset))
         self.active_dataset = self.data_prep.load_npz(dataset)
         self.print_console("Loading Dataset...")
@@ -208,9 +210,9 @@ class Trainer(AGBlank):
         # writer = tf.summary.FileWriter(self.model_path)
         self.print_console("All variables loaded")
 
-        # iters = 100
-        for i in range(100):
-            batch = self.data_prep.next_batch(100)
+        iters = 100
+        for i in range(iters):
+            batch = self.data_prep.next_batch(64)
             self.print_console("Got batch for iter {}".format(i+1))
             feed_dict = {x: batch[0],
                          y_: batch[1],
@@ -218,44 +220,17 @@ class Trainer(AGBlank):
             sess.run(train, feed_dict=feed_dict)
             g = sess.run(global_step)
             self.print_console("THIS IS WORKING!!! {}".format(g))
-            new_saver.save(sess, self.model_path, global_step)
+            if i % int(iters/10):
+                new_saver.save(sess, model_path, global_step)
             self.print_console("this is SAVING!!!")
-            # if i % 10:
-
-
-            # if i % int(iters/10) == 0:
-            #    new_saver.save(sess, self.model_path, global_step)
-            #    # writer.add_summary(summary, int(g+i))
-            #
-
-
-        #x = self.trainer_thread.setup(model_path, self.active_dataset, iters)
-        #self.print_console("Previous optimization: {}".format(x))
-        #self.print_console("#############################################")
-        #self.print_console("# Processing dataset to Playback Model")
-        #self.print_console("# Game Name: {}".format(self.currentGame))
-        #self.print_console("# Dataset Path: {}".format(model_path))
-        #self.print_console("# Number of Iterations to Train: {}".format(iters))
-        #try:
-            #self.trainer_thread.start()
-            #self.print_console("Greetings Prof. Falcon," +
-                               #"\tWould you like to play a game?")
-
-        #except Exception as e:
-        #    self.print_console("SHIT!... this is the error:\n{}\nSHIT!".format(e))
-
-        #finally:
-            #self.print_console("# Finished Training Model!")
-            #self.print_console("#############################################")
+        sess.close()
 
     """Selector FUNCTIONS"""
     def getSaves(self):
-        """
-        Creates a list of Datasets for the selected game.
-        """
+        """Create a list of Datasets for the selected game."""
         try:
             self.gamesList = os.listdir(self.work_dir)
-        except FileNotFoundError:
+        except Exception:
             self.print_console("Source path does not exist: {}".format(
                                self.work_dir))
             return
@@ -269,9 +244,7 @@ class Trainer(AGBlank):
         self.build_selector()
 
     def selecterator(self):
-        """
-        Make sure the finiky QWidget List selector doesnt crash the system.
-        """
+        """Ensure the finiky QWidget List selector doesnt crash the system."""
         selection = []
 
         # get self.selected from a global but this is a less good solution

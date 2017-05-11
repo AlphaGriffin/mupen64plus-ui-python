@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-""" Mupen64 TF-DataPrep
+"""Mupen64 TF-DataPrep.
+
 Process the FilePath of Npz to Model, Model to Model, Model to Print
 
 Alphagriffin.com
@@ -23,6 +24,7 @@ __status__ = "Prototype"
 
 class MupenNetwork(object):
     """A tensorflow network by: XX."""
+
     def __init__(self):
         """Known Sizes, could be in options."""
         self.IMG_W = 200
@@ -31,21 +33,22 @@ class MupenNetwork(object):
         pass
 
     def weight_variable(self, shape):
-        """As a method this can be used more effeciently."""
+        """Build a tensoflow Weight Variable."""
         initial = tf.truncated_normal(shape, stddev=0.1)
         return tf.Variable(initial)
 
     def bias_variable(self, shape):
-        """As a method this can be used more effeciently."""
+        """Build a tensoflow bias Variable."""
         initial = tf.constant(0.1, shape=shape)
         return tf.Variable(initial)
 
     def conv2d(self, x, W, stride):
-        """As a method this can be used more effeciently."""
-        return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='VALID')
+        """Build a tensorflow Conv2d Node."""
+        return tf.nn.conv2d(
+            x, W, strides=[1, stride, stride, 1], padding='VALID')
 
     def save_network(self, path):
-        """As a method this can be used more effeciently."""
+        """Build a tensorflow network."""
         with tf.Session() as sess:
             self.build_network()
             saver = tf.train.Saver()
