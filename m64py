@@ -22,7 +22,11 @@ import sys
 import signal
 
 import ag.logging as log
-log.set(5) # DEBUG level
+log.set(log.INFO)
+
+# disable PIL DEBUG messages
+import logging
+logging.getLogger().setLevel(level=logging.WARN)
 
 if os.path.isdir(os.path.join(".", "src")) and os.path.isfile(
         os.path.join(".", "setup.py")):

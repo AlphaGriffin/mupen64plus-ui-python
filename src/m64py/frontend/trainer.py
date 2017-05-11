@@ -220,10 +220,43 @@ class Trainer(AGBlank):
             sess.run(train, feed_dict=feed_dict)
             g = sess.run(global_step)
             self.print_console("THIS IS WORKING!!! {}".format(g))
+<<<<<<< HEAD
             if i % int(iters/10):
                 new_saver.save(sess, model_path, global_step)
             self.print_console("this is SAVING!!!")
         sess.close()
+=======
+            new_saver.save(sess, model_path, global_step)
+            self.print_console("this is SAVING!!!")
+            # if i % 10:
+
+
+            # if i % int(iters/10) == 0:
+            #    new_saver.save(sess, self.model_path, global_step)
+            #    # writer.add_summary(summary, int(g+i))
+            #
+
+        sess.close()
+
+        #x = self.trainer_thread.setup(model_path, self.active_dataset, iters)
+        #self.print_console("Previous optimization: {}".format(x))
+        #self.print_console("#############################################")
+        #self.print_console("# Processing dataset to Playback Model")
+        #self.print_console("# Game Name: {}".format(self.currentGame))
+        #self.print_console("# Dataset Path: {}".format(model_path))
+        #self.print_console("# Number of Iterations to Train: {}".format(iters))
+        #try:
+            #self.trainer_thread.start()
+            #self.print_console("Greetings Prof. Falcon," +
+                               #"\tWould you like to play a game?")
+
+        #except Exception as e:
+        #    self.print_console("SHIT!... this is the error:\n{}\nSHIT!".format(e))
+
+        #finally:
+            #self.print_console("# Finished Training Model!")
+            #self.print_console("#############################################")
+>>>>>>> 214988d5ea04d73979063920d7c6a2c4efeef7c7
 
     """Selector FUNCTIONS"""
     def getSaves(self):
