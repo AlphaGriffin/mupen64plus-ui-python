@@ -33,6 +33,25 @@ class DataPrep(object):
         self.labels = labels
         return images, labels
 
+    def next_batch(self, batch_size, shuffle=False):
+        #  Shuffle is off by default
+        start = self.index_in_epoch
+        self.index_in_epoch += batch_size
+        if self.index_in_epoch > self.num_examples:
+            # Finished epoch
+            self.epochs_completed += 1
+            # Shuffle the data
+            if shuffle:
+                perm = np.arange(self.num_examples)
+                np.random.shuffle(perm)
+                self.images = self.images[perm]
+                self.labels = self.labels[perm]
+            # Start next epoch
+            start = 0
+            self.index_in_epoch = batch_size
+        end = self.index_in_epoch
+        return self.images[start:end], self.labels[start:end]
+
 """
 class Tester(object):
     def __init__(self):
