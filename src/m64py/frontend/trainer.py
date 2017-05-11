@@ -211,11 +211,11 @@ class Trainer(AGBlank):
         iters = 100
         for i in range(iters):
             batch = self.data_prep.next_batch(100)
-
+            self.print_console("Got batch for iter {}".format(i))
             feed_dict = {x: batch[0],
                          y_: batch[1],
                          keep_prob: 0.8}
-            sess.run(train, feed_dict)
+            sess.run(train, feed_dict=feed_dict)
             g = sess.run(global_step)
             self.print_console("THIS IS WORKING!!! {}".format(g))
             if i % int(iters/10) == 0:
