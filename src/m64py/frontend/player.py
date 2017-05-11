@@ -82,13 +82,19 @@ class Player(AGBlank):
         self.actionButton.setEnabled(False)
 
         # check button starts server
+        self.checkButton.setText('Thing 1')
         self.checkButton.setEnabled(False)
+
+        # check2 button starts server
+        self.check2Button.setText('Thing 2')
+        self.check2Button.setEnabled(False)
 
         # status flags
         self.playing = False
         self.serving = False
         self.selected = None
         self.model_loaded = False
+        self.playing_game = False
         self.selection = []
         self.selectedRom = ""
         self.gamePath = ""
@@ -132,9 +138,27 @@ class Player(AGBlank):
     def stop_server(self):
         return self.ai_thread.stop_server()
 
-    def start_playing(self): pass
+    def start_playing(self):
+        log.info("Waking up the AI to play...")
 
-    def stop_playing(self): pass
+        self.start_server()
+        folder = os.path.join(self.gamePath, self.select_string)
+        self.ai_thread.load_n_check(folder)
+
+        # FIXME: this is a hack to get us through the mario kart menus...
+        for i in range(100):
+            self.ai_thread.web_handler.output([0, 0, 1, 0, 0])
+
+        #self.ai_thread.start()
+
+        #self.playing_game = True
+
+    def stop_playing(self):
+        log.info("The AI is going to sleep...")
+
+        self.stop_server()
+
+        self.playing_game = False
 
     # SELECTOR FUNCTIONS
     def populateSelector(self):
@@ -265,7 +289,7 @@ class Player(AGBlank):
         self.ai_thread.load_n_check(folder)
         log.debug("load_graph FINISHED!")
 
-        log.debug("starting server")
+        #log.debug("starting server")
 
 
         """
@@ -293,25 +317,32 @@ class Player(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Process the files"""
-        if not self.test_check and self.model_loaded is True:
-            test = self.tf_service()
-            if not test:
-                self.print_console("Cannot Proceed, Check your files!")
-                return False
-            self.print_console("Model Test Result: {}".format(test))
-            self.test_check = True
-            self.actionButton.setText('Start Game')
-        else:
-            self.print_console("Starting AI Player... Good Luck!")
-            self.start_playing()
-            self.actionButton.setText('Stop Game')
+        try:
+            """
+            if  self.model_loaded is True:
+                test = self.tf_service()
+                if not test:
+                    self.print_console("Cannot Proceed, Check your files!")
+                    return False
+                self.print_console("Model Test Result: {}".format(test))
+                self.actionButton.setText('Start Game')
+            else:
+            """
 
-        if self.playing_game:
-            self.print_console("Stoping AI Player... Good Job!")
-            self.stop_playing()
-        else:
-            self.print_console("You need to Test your Model")
-            self.actionButton.setText('Test Check')
+            if not self.playing_game:
+                self.print_console("Starting AI Player... Good Luck!")
+                self.start_playing()
+                self.actionButton.setText('Stop Game')
+            else:
+                self.print_console("Stopping AI Player... Good Job!")
+                self.stop_playing()
+                self.actionButton.setText('Start Game')
+            #else:
+            #    self.print_console("You need to Test your Model")
+            #    self.actionButton.setText('Test Check')
+        except Exception as e:
+            log.fatal()
+            raise e
 
     # ON WINDOW EVENTS
     def hide(self):
@@ -387,8 +418,9 @@ class PlayerThread(QThread):
                     moves = self.thinker.classify_image(image)
                     self.web_handler.output(moves)
                     self.parent.print_console(" -> {}".format(moves))
+                    log.debug("here again")
                 except Exception as e:
-                    log.fatal("Exception trying to play: {}".format(e))
+                    log.fatal("Exception trying to play", e)
 
             else:
                 time.sleep(.01)  # waiting 10 ms
@@ -432,19 +464,20 @@ class TensorPlay(object):
         try:
             self.session = tf.InteractiveSession()
             # new_path = "/Users/lannocc/.local/share/mupen64plus/model/outputmodel12/mupen64_mariokart64"
-            new_path = os.path.join(folder, "mupen64_mariokart64")
+            new_path = os.path.join(folder, "Mupen64plus")
             meta_path = new_path + ".meta"
             new_saver = tf.train.import_meta_graph(meta_path)
+            self.session.run(tf.global_variables_initializer())
             new_saver.restore(self.session, new_path)
         except Exception as e:
             log.fatal(traceback.format_exc())
 
         # FIXME: we have a situation here: there was no summary attached to this graph... gotta redo it.. :(
-        #self.x = tf.get_collection_ref('input')[0]
-        #self.k = tf.get_collection_ref('keep_prob')[0]
-        #self.y = tf.get_collection_ref('final_layer')[0]
-        #debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
-        #log.debug(debug)
+        self.x = tf.get_collection_ref('x_image')[0]
+        self.k = tf.get_collection_ref('keep_prob')[0]
+        self.y = tf.get_collection_ref('y')[0]
+        debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
+        log.debug("input", x=self.x, k=self.k, y=self.y)
         log.info("model successfully loaded")
         return True
 
@@ -501,15 +534,18 @@ class TensorPlay(object):
     def classify_image(self, vec):
         """Return labels matching the supplied image. Image should already be prepared."""
         log.debug("classify_image()")
+        #log.debug("vec", shape=vec.shape[:])
 
         try:
             feed_dict = {self.x: [vec], self.k: 1.0}
+            #log.debug("about to run session", feed_dict=feed_dict)
             joystick = self.session.run(self.y, feed_dict)
             log.debug("{}".format(joystick))
             joystick = joystick[0] # because an array of array is originally returned
             output = [
                 int(joystick[0] * 80),
                 int(joystick[1] * 80),
+                int(0), # START BUTTON
                 int(round(joystick[2])),
                 int(round(joystick[3])),
                 int(round(joystick[4])),
@@ -535,9 +571,16 @@ class ServerThread(QThread):
         log.debug("set_server(): {}".format(server))
         self.server = server
 
+    def quit(self):
+        self.running = False
+
     def run(self):
         log.debug("ServerThread run()")
-        self.server.serve_forever()
+        #self.server.serve_forever()
+
+        self.running = True
+        while not self.running:
+            self.server.handle_request()
 
 
 class PlayerInputRequestHandler(BaseHTTPRequestHandler):
