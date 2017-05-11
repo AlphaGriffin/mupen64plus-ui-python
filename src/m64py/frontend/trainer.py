@@ -17,15 +17,14 @@
 import os
 import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
-import m64py.tf.model as model
+import numpy as np
 import tensorflow as tf
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 
 from m64py.frontend.agblank import AGBlank
 from m64py.tf.data_prep import DataPrep
-from scratch.tf.mupen import mupenDataset as Data
-
+from m64py.tf.build_network import MupenNetwork
 pyVERSION = sys.version
 tfVERSION = tf.__version__
 INTRO =\
@@ -34,12 +33,12 @@ Tensorflow Model Creation and Training SOFTWARE:
     Python Version: {}
     Tensorflow Version: {}
     Step 1 - Choose a Dataset.
-    
+
     Step 2 - Click Train New Model. Visit AlphaGriffin.com for other ways and
     tools to train models. Make sure to Train at least 1 iteration and save
-    the model. 
-    
-    Step 3  - Then either (1) Load and Optimize your existing model or 
+    the model.
+
+    Step 3  - Then either (1) Load and Optimize your existing model or
     (2) take the model to Alphagriffin.com or your own AWS for further
     optimization.
 
@@ -49,14 +48,21 @@ Tensorflow Model Creation and Training SOFTWARE:
 
 class TfTraining(QThread):
     def setup(self, model_path, dataset_path, iters):
+
         sess = tf.InteractiveSession()
-        # open dataset path first.
-        self.dataset = DataPrep.load_npz(dataset_path)
-        self.session = DataPrep.load_model(sess, model_path)
-        self.model_path = model_path
+        checkpoint_file = tf.train.latest_checkpoint(model_path)
+        print(checkpoint_file)
+        new_saver = tf.train.import_meta_graph(checkpoint_file + ".meta")
+
+        sess.run(tf.global_variables_initializer())
+        new_saver.restore(self.sess, checkpoint_file)
+        global_step = tf.get_collection_ref('global_step')[0]
+
+        total_optimizations = sess.run(global_step)
+        print(total_optimizations)
         self.iters = iters
         # good
-        return True
+        return total_optimizations
 
     def run(self):
         x = tf.get_collection('x_image')[0]
@@ -98,7 +104,7 @@ class TfTraining(QThread):
             if i % int(iters/10) == 0:
                 saver.save(sess, self.model_path, global_step)
                 writer.add_summary(summary, int(g+i))
-        
+
     def tfStop(self):
         self.session.close()
 
@@ -112,16 +118,19 @@ class Trainer(AGBlank):
         self.selectorLabel.setText('Existing Save Folders:')
         self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.inputLabel.setText('Working Directory(s):')
-        self.actionButton.setText('Process')
         self.actionButton.setEnabled(False)
-        self.actionButton.setText('Train New Model')
+        self.actionButton.setText('Optimize')
         self.checkButton.setEnabled(False)
-        self.checkButton.setText('Load/Optimize')
+        self.checkButton.setText('Data Load')
+        self.check2Button.setEnabled(False)
+        self.check2Button.setText('Model Load')
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
-        
+
         # get references
         self.trainer_thread = TfTraining(parent=self.parent)
+        self.data_prep = DataPrep()
+        self.model_network = MupenNetwork()
 
         # booleans
         self.processing = False
@@ -133,45 +142,18 @@ class Trainer(AGBlank):
         self.gamePath = ""
         self.load_dir = ""
         self.selectingRom = True
-        
+        self.currentGame = None
+
         # Use the processor
         self.worker = worker
         self.root_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.root_dir, "datasets")
         self.save_dir = os.path.join(self.root_dir, "model")
 
-
         # Startup Processes
         self.getSaves()
 
     """TEST FUNCTIONS"""
-    def load_dataset(self, loadir, files):
-        # check file integrity
-        has_image_file = False
-        has_labels_file = False
-        for file in files:
-            file = os.path.join(self.load_dir, file)
-            if os.path.isfile(file):
-                if "image" in file:
-                    has_image_file = True
-                    #print("Image File: {}".format(file))
-                    self.image_file = file
-                if "label" in file:
-                    has_labels_file = True
-                    #print("Label File: {}".format(file))
-                    self.label_file = file
-            else:
-                print("Bad File name given: {}".format(file))
-        if has_image_file and has_labels_file:
-            # import the dataset can opener
-            self.print_console("Loading Dataset:\n\tImages{}\n\tLabels: {}".format(self.image_file,
-                                                                                   self.label_file))
-            self.active_dataset = Data(self.image_file, self.label_file)
-            self.print_console(self.active_dataset.msg)
-            return True
-        else:
-            "File Names  were no good..."
-            return False
 
     def select_data(self):
         """
@@ -180,76 +162,71 @@ class Trainer(AGBlank):
         * load numpy files and create a dataset
         * load and prep model params
         * create a new folder called work_dir/models/{game}/{game}model_{num}
-        * save the model 
+        * save the model
         * combine dataset and model params and train dataset
         * save again and confim
         """
-        files = self.selection
-        loaddir = os.path.join(self.root_dir, "datasets", self.currentGame)
-
-        # data = self.load_dataset(loadir, files)
-        if not data:
-            return False
-        self.print_console("Selected {} as Training Data Path".format(loaddir))
-        self.active_dataset = loaddir
+        files = self.selection[0]
+        dataset = os.path.join(self.root_dir, "datasets", self.currentGame, files)
+        self.print_console("Selected {} as Training Data Path".format(dataset))
+        self.active_dataset = self.data_prep.load_npz(dataset)
+        self.print_console("Loading Dataset...")
         self.actionButton.setEnabled(True)
         return True
 
     def build_new_network(self):
+        #print(self.currentGame)
         saveDir = os.path.join(self.root_dir, "model", self.currentGame)
-        model_fileName = "{}.tfmupen".format(self.currentGame)
+        self.print_console("{}".format(saveDir))
+        model_fileName = "{}Model".format(self.currentGame)
         full_path = os.path.join(saveDir, model_fileName)
-        if os.path.isdir(saveDir):
-            self.print_console("A Model Already Exists for this game: {}".format(saveDir))
-            # TODO: do you want to delete it and make a new one?
-            return full_path
-        else:
-            self.print_console("Creating folder: {}".format(saveDir))
-            os.mkdir(saveDir)
-            with tf.Session as sess:
-                from m64py.tf.build_network import *
-
-
-
-
-
+        self.print_console("{}".format(full_path))
+        try:
+            os.mkdir(full_path)
+        except Exception as e:
+            self.print_console("{}".format(e))
+            try:
+                os.mkdir(saveDir)
+                os.mkdir(full_path)
+                pass
+            except Exception as e:
+                self.print_console("{}".format(e))
+        self.print_console("created a new directory {}".format(full_path))
+        self.model_network.save_network(full_path)
+        self.print_console("this is working!")
 
     def train_network(self, iters=5):
         saveDir = os.path.join(self.root_dir, "model", self.currentGame)
-        model_fileName = "{}_playbackModel.ckpt".format(self.currentGame)
+        model_fileName = "{}Model".format(self.currentGame)
+        model_path = os.path.join(saveDir, model_fileName)
+        self.print_console("Loading Model From: {}".format(model_path))
+        sess = tf.InteractiveSession()
+        checkpoint_file = tf.train.latest_checkpoint(model_path)
+        print(checkpoint_file)
+        new_saver = tf.train.import_meta_graph(checkpoint_file + ".meta")
+        print("found metagraph")
+        sess.run(tf.global_variables_initializer())
+        print("init those variables")
+        new_saver.restore(self.sess, checkpoint_file)
+        self.print_console("this is working!")
+        #x = self.trainer_thread.setup(model_path, self.active_dataset, iters)
+        #self.print_console("Previous optimization: {}".format(x))
+        #self.print_console("#############################################")
+        #self.print_console("# Processing dataset to Playback Model")
+        #self.print_console("# Game Name: {}".format(self.currentGame))
+        #self.print_console("# Dataset Path: {}".format(model_path))
+        #self.print_console("# Number of Iterations to Train: {}".format(iters))
+        #try:
+            #self.trainer_thread.start()
+            #self.print_console("Greetings Prof. Falcon," +
+                               #"\tWould you like to play a game?")
 
-        if not os.path.isdir(saveDir):
-            self.print_console("Creating folder: {}".format(saveDir))
-            os.mkdir(saveDir)
+        #except Exception as e:
+        #    self.print_console("SHIT!... this is the error:\n{}\nSHIT!".format(e))
 
-        datasetIndex = len(os.listdir(saveDir))
-        model_savePath = os.path.join(saveDir, "playbackModel_{}".format(datasetIndex))
-
-        if not os.path.isdir(model_savePath):
-            self.print_console("Creating folder: {}".format(model_savePath))
-            os.mkdir(model_savePath)
-
-        model_fileName = os.path.join(model_savePath, model_fileName)
-        # start threading processes
-        print(self.active_dataset.msg)
-        self.trainer_thread.setup(model_fileName, self.active_dataset, iters)
-        self.print_console("#############################################")
-        self.print_console("# Processing dataset to Playback Model")
-        self.print_console("# Game Name: {}".format(self.currentGame))
-        self.print_console("# Dataset Path: {}".format(model_savePath))
-        self.print_console("# Number of Iterations to Train: {}".format(iters))
-        try:
-            self.trainer_thread.start()
-            self.print_console("Greetings Prof. Falcon," +
-                               "\tWould you like to play a game?")
-
-        except Exception as e:
-            self.print_console("SHIT!... this is the error:\n{}\nSHIT!".format(e))
-
-        finally:
-            self.print_console("# Finished Training Model!")
-            self.print_console("#############################################")
-
+        #finally:
+            #self.print_console("# Finished Training Model!")
+            #self.print_console("#############################################")
 
     """Selector FUNCTIONS"""
     def getSaves(self):
@@ -267,22 +244,23 @@ class Trainer(AGBlank):
         self.selectingRom = True
         self.actionButton.setEnabled(False)
         self.checkButton.setEnabled(False)
+        self.check2Button.setEnabled(False)
         self.currentGame = False
         self.build_selector()
-        
+
     def selecterator(self):
         """
         Make sure the finiky QWidget List selector doesnt crash the system.
         """
         selection = []
-        
+
         # get self.selected from a global but this is a less good solution
         for x in self.selected:
             selection.append(x.text())
         select_string = ", ".join(x for x in selection)
         self.input.setText("100")
         self.selection = selection
-        
+
         # if we have picked a game
         if any(select_string in s for s in self.gamesList):
             if not self.currentGame:
@@ -294,50 +272,58 @@ class Trainer(AGBlank):
             if os.path.isdir(self.load_dir):
                 self.build_selector(folder=self.load_dir)
                 return
-        
+
         # if we need to go back and pick a different game
         if len(select_string) is 3:
             self.print_console("going back to choose another game!")
             self.getSaves()
             return
-            
+
         # if we have a list of Dirs to work on ...
         self.checkButton.setEnabled(True)
+        self.check2Button.setEnabled(True)
         # click on the button!!!
-                   
+
     def build_selector(self, folder=""):
         """This populates the save folder list"""
         self.selector.clear()
-        if not self.selectingRom or folder is not "": 
+        if not self.selectingRom or folder is not "":
             self.selector.addItem("../")
             for i in sorted(os.listdir(folder)):
-                self.selector.addItem("{}".format(i))   
+                self.selector.addItem("{}".format(i))
         else:
             for i in self.gamesList:
                 self.selector.addItem("{}".format(i))
         """then we need to be selecting folders to process"""
-    
+
     def show(self):
         """On Show this window"""
         super().show()
-        
+
     def hide(self):
         """On hide this window"""
         super().hide()
-    
+
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Start Training the model"""
-        iters = self.input.text()
-        self.train_network(iters=iters)
+        # iters = self.input.text()
+        self.train_network()
         pass
-        
+
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
         self.select_data()
         pass
-         
+
+    @pyqtSlot()
+    def on_check2Button_clicked(self):
+        """Test Button for pressing broken parts"""
+        self.build_new_network()
+        self.print_console("check2button pressed!")
+        pass
+
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
         self.selected = self.selector.selectedItems()
@@ -345,6 +331,6 @@ class Trainer(AGBlank):
             self.selecterator()
             return
         self.actionButton.setEnabled(False)
-        
+
     @pyqtSlot()
     def closeEvent(self, event=False): pass

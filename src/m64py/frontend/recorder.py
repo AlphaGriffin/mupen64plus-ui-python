@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: SAW @ AlphaGriffin <Alphagriffin.com>
+# Author: Ruckusist @ AlphaGriffin <Alphagriffin.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -98,6 +98,9 @@ class Recorder(AGBlank):
         self.actionButton.setText('Record')
         self.actionButton.setEnabled(False)
         self.checkButton.setEnabled(True)
+        self.checkButton.setText('Check')
+        self.check2Button.setEnabled(False)
+        self.check2Button.setText('thing2')
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
 
@@ -118,7 +121,6 @@ class Recorder(AGBlank):
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
 
-
     def set_save_dir(self):
         """Sets the Input Field text"""
         name = self.getGame()
@@ -133,6 +135,8 @@ class Recorder(AGBlank):
 
         l = len(os.listdir(name_path))
         path = "newGame_{}".format(l)
+        msg = "Ready to Save in Directory:"
+        self.print_console("{}\n{}".format(msg, os.path.join(name_path,path)))
         self.input.setText(os.path.join(name_path,path))
         self.actionButton.setEnabled(True)
 
@@ -163,11 +167,6 @@ class Recorder(AGBlank):
             outfile.close()
         self.print_console(y)
 
-    #def setWorker(self, worker):
-    #    """Get Worker from main code and check the local Userdata folder"""
-    #    self.worker = worker
-    #    self.work_dir = self.worker.core.config.get_path("UserData")
-
     def getGame(self):
         """Check if game has been selected and set a dir if it has"""
         x = self.check_game_name = self.worker.core.rom_header.Name.decode().replace(" ", "_").lower()
@@ -190,7 +189,6 @@ class Recorder(AGBlank):
             self.runningTimer.stop()
             self.runningTimer = False
 
-
     def check_game(self):
         """Check mupen worker and see if hes working, called by runningTimer"""
         wasloaded = self.game_on
@@ -208,9 +206,9 @@ class Recorder(AGBlank):
             if loaded:
                 self.set_save_dir()
 
-
     def record(self):
         """this starts the recording timer and actionable function"""
+        self.print_console("Starting Recording")
         self.actionButton.setText('Stop')
         self.save_name = self.input.text()
 
@@ -282,8 +280,14 @@ class Recorder(AGBlank):
 
     @pyqtSlot()
     def on_checkButton_clicked(self):
-        """Test Button for pressing broken parts"""
+        """check constitution of system"""
         self.check_game()
+        self.print_console("Checking Record Readiness.")
+
+    @pyqtSlot()
+    def on_check2Button_clicked(self):
+        """Test Button for pressing broken parts"""
+        self.print_console("Thing2")
 
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self): pass

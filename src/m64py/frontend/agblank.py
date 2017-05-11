@@ -34,12 +34,12 @@ class AGBlank(QWidget, Ui_AGBlank):
         self.setupUi(self)
         self.work_dir = None
 
-    def print_console(self, msg): 
+    def print_console(self, msg):
         """Takes a String and prints to console"""
         self.console.moveCursor(QTextCursor.End)
         self.console.insertPlainText("{}\n".format(msg))
         print(msg)
-        
+
     def setWorker(self, worker, work_dir=None):
         """Get Worker from main code and check the local Userdata folder"""
         log.debug("AGBlank::setWorker()")
@@ -65,5 +65,5 @@ class AGBlank(QWidget, Ui_AGBlank):
 
 
 # Subclasses might create a member variable of their own:
-#    
+#
 #agblank = AGBlank_YourSubclass()

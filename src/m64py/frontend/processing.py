@@ -150,11 +150,15 @@ class Processing(AGBlank):
         self.selectorLabel.setText('Existing Save Folders:')
         self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.inputLabel.setText('Working Directory(s):')
+
         self.actionButton.setText('Process')
         self.actionButton.setEnabled(False)
         self.actionButton.setText('Game Select')
         self.checkButton.setEnabled(True)
         self.checkButton.setText('Pick Game')
+        self.check2Button.setEnabled(False)
+        self.check2Button.setText('Testing')
+
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
         
@@ -286,6 +290,8 @@ class Processing(AGBlank):
         if not self.selectingRom or folder is not "": 
             self.selector.addItem("../")
             for i in sorted(os.listdir(folder)):
+                if "." in i:
+                    i += '!!!'
                 self.selector.addItem("{}".format(i))   
         else:
             for i in self.gamesList:
@@ -310,6 +316,12 @@ class Processing(AGBlank):
         """Test Button for pressing broken parts"""
         # reset and select game again...
         self.getSaves()
+
+    @pyqtSlot()
+    def on_check2Button_clicked(self):
+        """Test Button for pressing broken parts"""
+        # reset and select game again...
+        self.print_console("Testing button2")
          
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
