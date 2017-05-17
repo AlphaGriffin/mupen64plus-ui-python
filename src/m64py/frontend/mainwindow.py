@@ -509,3 +509,7 @@ class View(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
         self.setScene(QGraphicsScene(self))
         self.scene().addItem(QGraphicsPixmapItem(QPixmap(":/images/front.png")))
+
+    def mousePressEvent(self, event):
+        self.parent.on_actionFromList_triggered()
+
