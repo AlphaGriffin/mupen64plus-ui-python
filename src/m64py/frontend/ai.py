@@ -79,6 +79,16 @@ class AIDashboard(QDialog, Ui_AIDashboard):
             self.player = None
             self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Play")
 
+        """This is only a test."""
+        try:
+            from m64py.frontend.recorder_player import Player
+            self.player = Player(self, self.worker)
+            self.tabster.addTab(self.player, "TESTER")
+        except Exception as e:
+            log.error("Failed to load Player: {}".format(e))
+            self.player = None
+            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Play")
+
         self.nextTabButton.setEnabled(True)
         self.status.setText("Ready.")
 
@@ -102,4 +112,3 @@ class AIDashboard(QDialog, Ui_AIDashboard):
     def on_tabster_currentChanged(self, index):
         self.prevTabButton.setEnabled(index > 0)
         self.nextTabButton.setEnabled(index < self.tabster.count() - 1)
-
