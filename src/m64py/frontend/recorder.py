@@ -24,8 +24,8 @@ VERSION = sys.version
 
 # FIXME
 INTRO =\
-"""
-Recording Console by: AlphaGriffin.com
+"""Recording Console by: AlphaGriffin.com.
+
 Built in python 3.5.2
 You are running: {0:2}
 Step 1: Start a ROM and get past the menus and into the game and pause it.
@@ -148,7 +148,7 @@ class Recorder(AGBlank):
             self.selector.addItem(x)
         self.selector.addItem("Record a New Game")
 
-    def save_data(self,test=False):
+    def save_data(self, test=False):
         """
         Create data.csv - Timestamp, { 0.0, 0.0, 0, 0, 0 }
         """
@@ -287,7 +287,7 @@ class Recorder(AGBlank):
     @pyqtSlot()
     def on_check2Button_clicked(self):
         """Test Button for pressing broken parts"""
-        self.print_console("Thing2")
+        self.print_console("null")
 
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self): pass
