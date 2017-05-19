@@ -22,7 +22,7 @@ import sys
 import signal
 
 import ag.logging as log
-log.set(log.INFO)
+log.set(log.DEBUG)
 
 # disable PIL DEBUG messages
 import logging

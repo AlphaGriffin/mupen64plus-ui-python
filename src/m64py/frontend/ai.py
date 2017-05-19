@@ -17,11 +17,12 @@
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QDialog
 from m64py.ui.ai_ui import Ui_AIDashboard
-import traceback
-
-from m64py.frontend.agerror import AGError
+from m64py.frontend.agdeferred import AGDeferred
+from imp import reload
 
 import ag.logging as log
+
+
 
 #
 # The Alpha Griffin Aritificial Intelligence Dashboard
@@ -38,65 +39,41 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         self.setupUi(self)
 
         self.status.setText("Loading the interface...")
-
         self.parent = parent
         self.worker = worker
         self.settings = settings
 
-        try:
-            from m64py.frontend.recorder import Recorder
-            self.recorder = Recorder(self, self.worker)
-            self.tabster.addTab(self.recorder, "Record")
-        except Exception as e:
-            log.error("Failed to load Recorder: {}".format(e))
-            self.recorder = None
-            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Record")
+        if log.level >= log.DEBUG:
+            self.tabster.setTabsClosable(True)
 
-        try:
-            from m64py.frontend.processing import Processing
-            self.processing = Processing(self, self.worker)
-            self.tabster.addTab(self.processing, "Process")
-        except Exception as e:
-            log.error("Failed to load Processing: {}".format(e))
-            self.processing = None
-            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Process")
-
-        try:
-            from m64py.frontend.trainer import Trainer
-            self.trainer = Trainer(self, self.worker)
-            self.tabster.addTab(self.trainer, "Train")
-        except Exception as e:
-            log.error("Failed to load Trainer: {}".format(e))
-            self.trainer = None
-            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Train")
-
-        try:
-            from m64py.frontend.player import Player
-            self.player = Player(self, self.worker, self.settings)
-            self.tabster.addTab(self.player, "Play")
-        except Exception as e:
-            log.error("Failed to load Player: {}".format(e))
-            self.player = None
-            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Play")
-
-        """This is only a test."""
-        try:
-            from m64py.frontend.recorder_player import Player
-            self.player = Player(self, self.worker)
-            self.tabster.addTab(self.player, "TESTER")
-        except Exception as e:
-            log.error("Failed to load Player: {}".format(e))
-            self.player = None
-            self.tabster.addTab(AGError(self, traceback.format_exc()), "[!] Play")
+        # set up all the functional tabs for deferred load
+        self.drecorder = DRecorder(self)
+        self.dprocessing = DProcessing(self)
+        self.dtrainer = DTrainer(self)
+        self.dplayer = DPlayer(self)
+        self.dtester = DTester(self) # FIXME just testing
 
         self.nextTabButton.setEnabled(True)
-        self.status.setText("Ready.")
+        self.status.setText("Ready (loading deferred).")
 
 
     def show(self):
-        """show this window"""
+        """show this window and attempt to load any tabs not already loaded"""
+        log.debug()
         super().show()
-        log.debug("AIDashboard::show()")
+
+        errs = 0
+        if not self.drecorder.check(): errs += 1
+        if not self.dprocessing.check(): errs += 1
+        if not self.dtrainer.check(): errs += 1
+        if not self.dplayer.check(): errs += 1
+        if not self.dtester.check(): errs += 1
+
+        if errs > 1:
+            self.status.setText("{} components failed to load. Open the tabs with [!] for details.".format(errs))
+        elif errs > 0:
+            self.status.setText("A component failed to load. Open the tab with [!] for details.")
+
 
     @pyqtSlot()
     def on_prevTabButton_clicked(self):
@@ -112,3 +89,92 @@ class AIDashboard(QDialog, Ui_AIDashboard):
     def on_tabster_currentChanged(self, index):
         self.prevTabButton.setEnabled(index > 0)
         self.nextTabButton.setEnabled(index < self.tabster.count() - 1)
+
+    @pyqtSlot(int)
+    def on_tabster_tabBarDoubleClicked(self, index):
+        self.on_tabster_tabCloseRequested(index)
+
+    @pyqtSlot(int)
+    def on_tabster_tabCloseRequested(self, index):
+        #self.tabster.removeTab(index)
+
+        self.drecorder.reload(index)
+        self.dprocessing.reload(index)
+        self.dtrainer.reload(index)
+        self.dplayer.reload(index)
+        self.dtester.reload(index)
+
+        self.tabster.setCurrentIndex(index)
+
+
+
+class DRecorder(AGDeferred):
+    def __init__(self, dashboard):
+        log.debug()
+        AGDeferred.__init__(self, dashboard, "Record")
+
+    def load(self):
+        from m64py.frontend.recorder import Recorder
+        recorder = Recorder(self.dashboard, self.dashboard.worker)
+        self.dashboard.recorder = recorder
+        return recorder
+
+
+
+
+class DProcessing(AGDeferred):
+    def __init__(self, dashboard):
+        log.debug()
+        AGDeferred.__init__(self, dashboard, "Process")
+
+    def load(self):
+        import m64py.frontend.processing as frontend
+        reload(frontend)
+        processing = frontend.Processing(self.dashboard, self.dashboard.status, self.dashboard.worker)
+        self.dashboard.processing = processing
+        return processing
+
+
+
+
+class DTrainer(AGDeferred):
+    def __init__(self, dashboard):
+        log.debug()
+        AGDeferred.__init__(self, dashboard, "Train")
+
+    def load(self):
+        from m64py.frontend.trainer import Trainer
+        trainer = Trainer(self.dashboard, self.dashboard.worker)
+        self.dashboard.trainer = trainer
+        return trainer
+
+
+
+
+class DPlayer(AGDeferred):
+    def __init__(self, dashboard):
+        log.debug()
+        AGDeferred.__init__(self, dashboard, "Play")
+
+    def load(self):
+        from m64py.frontend.player import Player
+        player = Player(self.dashboard, self.dashboard.worker, self.dashboard.settings)
+        self.dashboard.player = player
+        return player
+
+
+
+
+# FIXME: just testing
+class DTester(AGDeferred):
+    def __init__(self, dashboard):
+        log.debug()
+        AGDeferred.__init__(self, dashboard, "Play (TEST)")
+
+    def load(self):
+        from m64py.frontend.recorder_player import Player
+        player = Player(self.dashboard, self.dashboard.worker)
+        self.dashboard.player = player
+        return player
+
+

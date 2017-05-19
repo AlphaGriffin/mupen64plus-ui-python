@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtCore import pyqtSlot, QTimer
+from PyQt5.QtCore import pyqtSlot
 import os, sys, pygame, time, shutil
 
 import ag.logging as log
@@ -26,7 +26,7 @@ VERSION = sys.version
 INTRO =\
 """Recording Console by: AlphaGriffin.com.
 
-Built in python 3.5.2
+Built in python 3.6
 You are running: {0:2}
 Step 1: Start a ROM and get past the menus and into the game and pause it.
 Step 2: press the check if game is running button for non-async...
@@ -39,57 +39,16 @@ record again and keep playing. The more you contribute to the dataset, the
 better you can train your model.
 """.format(VERSION)
 
-### PLEASE DEPRCIATE THIS SOON
-class xpad(object):
-    """ This conversion comes from the orginal TKart Demo """
-    def __init__(self,options=None):
-        try:
-            self.joystick.init()
-        except:
-            print('unable to connect to Xbox Controller')
-
-    def read(self):
-        """ This is the call polled for the xpad data """
-        pygame.event.pump()
-        # left stick
-        L_x_axis = self.joystick.get_axis(0)
-        L_y_axis = self.joystick.get_axis(1)
-        # need left stick click
-        # right stick
-        # R_x_axis = self.joystick.get_axis(2)
-        # R_y_axis = self.joystick.get_axis(3)
-        # need right stick click
-        # need d-pad
-
-        # game buttons
-        a_btn = self.joystick.get_button(1) ## HACKS!! THIS A HACK
-        b_btn = self.joystick.get_button(2) ## THESE buttons are re maped in the thing... /hack
-        # x_btn = self.joystick.get_button(2)
-        # y_btn = self.joystick.get_button(3)
-
-        # top buttons
-        # lb = self.joystick.get_button(4)
-        rb = self.joystick.get_button(5)
-
-        # need start / select
-
-        # need triggers /
-        return [L_x_axis, L_y_axis, a_btn, b_btn, rb]
-
-    def manual_override(self):
-        """ This takes over from the AI, allows for better 2nd Gen Training """
-        pygame.event.pump()
-        return self.joystick.get_button(4) == 1
-
-
 class Recorder(AGBlank):
     """AG_Recorder Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
-        log.debug("Recorder::__init__()")
+        log.debug()
         # init
         super().__init__(parent)
         self.setWorker(worker)   # get this from MUPEN core
+        '''
         self.pad = xpad()        # get a controller instance
+        '''
 
         # set up the blanks
         self.setWindowTitle('AG Recorder')
@@ -148,6 +107,7 @@ class Recorder(AGBlank):
             self.selector.addItem(x)
         self.selector.addItem("Record a New Game")
 
+    '''
     def save_data(self, test=False):
         """
         Create data.csv - Timestamp, { 0.0, 0.0, 0, 0, 0 }
@@ -166,6 +126,7 @@ class Recorder(AGBlank):
                           map(str, paddle_read))))
             outfile.close()
         self.print_console(y)
+    '''
 
     def getGame(self):
         """Check if game has been selected and set a dir if it has"""
@@ -174,6 +135,7 @@ class Recorder(AGBlank):
             return x
         return "no_game"
 
+    '''
     def startupTimer(self):
         """Start a timer if none is running and keep checking back"""
         # start game checker
@@ -188,6 +150,7 @@ class Recorder(AGBlank):
         if not self.runningTimer == False:
             self.runningTimer.stop()
             self.runningTimer = False
+    '''
 
     def check_game(self):
         """Check mupen worker and see if hes working, called by runningTimer"""
@@ -215,9 +178,11 @@ class Recorder(AGBlank):
         if not os.path.isdir(self.save_name):
             os.makedirs(self.save_name)
 
+        '''
         self.poll_time = QTimer(self)
         self.poll_time.timeout.connect(self.save_data) # takes the pick and saves data
         self.poll_time.start(50)    # in millis
+        '''
         self.worker.toggle_autoshots()
         self.recording = True
         self.recordStartedAt = time.time()*1000.0
@@ -225,7 +190,9 @@ class Recorder(AGBlank):
     def stop(self):
         """This ends the recording session and buttons up the screenshot dir"""
         if self.recording:
+            '''
             self.poll_time.stop()
+            '''
             self.worker.toggle_autoshots()
             self.actionButton.setText('Record')
 
@@ -263,12 +230,16 @@ class Recorder(AGBlank):
 
     def show(self):
         """ default show command """
+        '''
         self.startupTimer()
+        '''
         super().show()
 
     def hide(self):
         """ This stops recording on game close """
+        '''
         self.shutdownTimer()
+        '''
         self.stop()
         super().hide()
 

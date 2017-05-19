@@ -498,6 +498,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_actionAIDashboard_triggered(self):
         """Shows Artificial Intelligence Dashboard dialog."""
         self.ai.show()
+        self.ai.raise_()
 
 
 class View(QGraphicsView):

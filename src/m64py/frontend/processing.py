@@ -15,12 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.agblank import AGBlank
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 import os, sys
-import numpy as np
-from PIL import Image
 VERSION = sys.version
+
+import ag.logging as log
 
 INTRO =\
 """
@@ -35,14 +35,70 @@ CONVERSION SOFTWARE:
         release.
 """.format(VERSION,)
 
-class Prepare(object):
+class Prepare(QThread):
     """ 
     This will be used by both the Process and Playback Modules for conversion
     of images for Tensorflow.
     """
-    def __init__(self,options=None):
-        self.options = options
-                
+    def __init__(self, ui, folders=""):
+        QThread.__init__(self, ui)
+        self.ui = ui
+        self.folders = folders
+
+    def run(self):
+        log.debug()
+        try:
+            self.ui.status("Beginning processing...")
+            import numpy as np
+            from PIL import Image
+
+            folders = self.folders
+            if folders is "": 
+                folders = self.ui.selection
+            saveDir = os.path.join(self.ui.root_dir, "datasets", self.ui.currentGame)
+            if not os.path.isdir(saveDir):
+                self.ui.print_console("Creating folder: {}".format(saveDir))
+                os.mkdir(saveDir)
+            datasetIndex = len(os.listdir(saveDir))
+            dataset_x = []
+            dataset_y = []
+            datasetFilename = "{}_dataset_{}".format(self.ui.currentGame,datasetIndex)
+            self.ui.print_console("#############################################")
+            self.ui.print_console("# Processing Game folders to dataset")
+            self.ui.print_console("# Game Name: {}".format(self.ui.currentGame))
+            self.ui.print_console("# Dataset Path: {}".format(saveDir))
+            self.ui.print_console("# Number of saves to process: {}".format(
+                               len(folders)))
+            self.ui.print_console("#############################################")
+            
+            # for each folder given...
+            for i in folders:
+                current_path = os.path.join(self.ui.work_dir,self.ui.currentGame,i)
+                self.ui.print_console("# Processing folder: {}".format(current_path))
+                self.ui.print_console("# Step 1: Assert #imgs == #labels")
+                labels, imgs = self.gamepadImageMatcher(current_path)
+                dataset_y.append(labels) # BOOM!
+                self.ui.print_console("# Step 2: Convert img to BW np array of (x,y)")
+                for image in imgs:
+                    img = self.prepare_image(os.path.join(current_path,image))
+                    dataset_x.append(img)
+            
+            self.ui.print_console("# Step 3: Save files...\n\t{}.npz".format(datasetFilename))
+            dataset_x = np.asarray(dataset_x)
+            dataset_y = np.concatenate(dataset_y)
+            # super_set = [dataset_x, dataset_y]
+            self.ui.print_console("# To Dir:\t{}".format(saveDir))
+            # np.save(os.path.join(saveDir, datasetFilename_x), dataset_x)
+            # np.save(os.path.join(saveDir, datasetFilename_y), dataset_y)
+            np.savez(os.path.join(saveDir, datasetFilename), images=dataset_x, labels=dataset_y)
+            self.ui.print_console("# Finished preparing dataset")
+            self.ui.status("Processing finished.")
+
+        except Exception as e:
+            log.fatal()
+            self.ui.status("Error while processing: {}".format(e))
+
+
     def make_BW(self,rgb):
         """ This is the "rec601 luma" algorithm to compute 8-bit greyscale """
         return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
@@ -144,8 +200,8 @@ class Prepare(object):
         
 class Processing(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui"""
-    def __init__(self, parent, worker):
-        super().__init__(parent)
+    def __init__(self, parent, status, worker):
+        super().__init__(parent, status)
         self.setWindowTitle('AG Processing')
         self.selectorLabel.setText('Existing Save Folders:')
         self.selector.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -163,7 +219,6 @@ class Processing(AGBlank):
         self.selector.setEnabled(False)
         
         # booleans
-        self.processing = False
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
         self.selected = None
@@ -173,58 +228,13 @@ class Processing(AGBlank):
         self.selectingRom = True
         
         # Use the processor
-        self.process = Prepare()
+        self.process = Prepare(self)
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.root_dir = self.work_dir
         self.work_dir = os.path.join(self.work_dir, "training")
         self.getSaves()
         
-        
-    """ TEST FUNCTIONS """
-    def processing_(self, folders=""):
-        """This has 3 steps, move files, convert images, create bins"""
-        # this should be global but its breaking!
-        proc = Prepare()
-        if folders is "": 
-            folders = self.selection
-        saveDir = os.path.join(self.root_dir, "datasets", self.currentGame)
-        if not os.path.isdir(saveDir):
-            self.print_console("Creating folder: {}".format(saveDir))
-            os.mkdir(saveDir)
-        datasetIndex = len(os.listdir(saveDir))
-        dataset_x = []
-        dataset_y = []
-        datasetFilename = "{}_dataset_{}".format(self.currentGame,datasetIndex)
-        self.print_console("#############################################")
-        self.print_console("# Processing Game folders to dataset")
-        self.print_console("# Game Name: {}".format(self.currentGame))
-        self.print_console("# Dataset Path: {}".format(saveDir))
-        self.print_console("# Number of saves to process: {}".format(
-                           len(folders)))
-        self.print_console("#############################################")
-        
-        # for each folder given...
-        for i in folders:
-            current_path = os.path.join(self.work_dir,self.currentGame,i)
-            self.print_console("# Processing folder: {}".format(current_path))
-            self.print_console("# Step 1: Assert #imgs == #labels")
-            labels, imgs = proc.gamepadImageMatcher(current_path)
-            dataset_y.append(labels) # BOOM!
-            self.print_console("# Step 2: Convert img to BW np array of (x,y)")
-            for image in imgs:
-                img = proc.prepare_image(os.path.join(current_path,image))
-                dataset_x.append(img)
-        
-        self.print_console("# Step 3: Save files...\n\t{}.npz".format(datasetFilename))
-        dataset_x = np.asarray(dataset_x)
-        dataset_y = np.concatenate(dataset_y)
-        # super_set = [dataset_x, dataset_y]
-        self.print_console("# To Dir:\t{}".format(saveDir))
-        # np.save(os.path.join(saveDir, datasetFilename_x), dataset_x)
-        # np.save(os.path.join(saveDir, datasetFilename_y), dataset_y)
-        np.savez(os.path.join(saveDir, datasetFilename), images=dataset_x, labels=dataset_y)
-        self.print_console("# Finished preparing dataset")
         
     
     """ Selector FUNCTIONS """
@@ -309,7 +319,8 @@ class Processing(AGBlank):
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Process the files"""
-        self.processing_()
+        log.debug()
+        self.process.start()
         
     @pyqtSlot()
     def on_checkButton_clicked(self):

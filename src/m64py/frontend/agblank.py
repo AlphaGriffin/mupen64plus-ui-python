@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from PyQt5.QtWidgets import QWidget
 from m64py.ui.agblank_ui import Ui_AGBlank
 from PyQt5.QtGui import QTextCursor
@@ -28,10 +27,11 @@ import ag.logging as log
 # would find useful.
 
 class AGBlank(QWidget, Ui_AGBlank):
-    def __init__(self, parent=None):
-        log.debug("AGBlank::__init__()")
+    def __init__(self, parent=None, status=None):
+        log.debug()
         QWidget.__init__(self, parent)
         self.setupUi(self)
+        self.statusWidget = status
         self.work_dir = None
 
     def print_console(self, msg):
@@ -42,7 +42,7 @@ class AGBlank(QWidget, Ui_AGBlank):
 
     def setWorker(self, worker, work_dir=None):
         """Get Worker from main code and check the local Userdata folder"""
-        log.debug("AGBlank::setWorker()")
+        log.debug()
         self.worker = worker
         self.root_dir = self.worker.core.config.get_path("UserData")
         log.info("root dir set to: {}".format(self.root_dir))
@@ -55,15 +55,8 @@ class AGBlank(QWidget, Ui_AGBlank):
             self.work_dir = self.root_dir
         log.info("work dir set to: {}".format(self.work_dir))
 
+    def status(self, msg):
+        """Update status message"""
+        if self.statusWidget is not None:
+            self.statusWidget.setText(msg)
 
-#    @pyqtSlot()
-#    def on_actionRecording_Console_triggered(self):
-#        """Shows recorder dialog."""
-#        recorder.show()
-
-
-
-
-# Subclasses might create a member variable of their own:
-#
-#agblank = AGBlank_YourSubclass()
