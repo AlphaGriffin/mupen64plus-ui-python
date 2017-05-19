@@ -17,21 +17,17 @@
 import os
 import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
-import numpy as np
-import tensorflow as tf
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 from m64py.frontend.agblank import AGBlank
-from m64py.tf.data_prep import DataPrep
-from m64py.tf.build_network import MupenNetwork
 pyVERSION = sys.version
-tfVERSION = tf.__version__
+
+import ag.logging as log
 
 INTRO = """This is a test.
 
 Tensorflow Model Creation and Training SOFTWARE:
     Python Version: {}
-    Tensorflow Version: {}
     Step 1 - Choose a Dataset.
 
     Step 2 - Click Train New Model. Visit AlphaGriffin.com for other ways and
@@ -41,10 +37,18 @@ Tensorflow Model Creation and Training SOFTWARE:
     Step 3  - Then either (1) Load and Optimize your existing model or
     (2) take the model to Alphagriffin.com or your own AWS for further
     optimization.
-""".format(pyVERSION, tfVERSION)
+""".format(pyVERSION)
 
 
-class TfTraining(QThread):
+class Worker(QThread):
+
+    def __init__(self, ui):
+        log.debug()
+        QThread.__init__(self, ui)
+        self.ui = ui
+        self.state = 0
+
+    '''
     def setup(self, model_path, dataset, iters):
 
         self.model_path = model_path
@@ -92,14 +96,144 @@ class TfTraining(QThread):
 
     def tfStop(self):
         self.session.close()
+    '''
+
+    def run(self):
+        log.debug()
+        try:
+            self.ui.status("Importing Python modules...")
+            import tensorflow as tf
+            import time
+            from m64py.tf.data_prep import DataPrep
+            from m64py.tf.build_network import MupenNetwork
+            self.ui.status("Ready for training.")
+
+            self.tf = tf
+            self.data_prep = DataPrep()
+            self.model_network = MupenNetwork()
+
+            while self.state >= 0:
+                time.sleep(0) # yield to other threads
+
+                if self.state == 1:
+                    self.select_data()
+                    self.state = 0
+
+                elif self.state == 2:
+                    self.build_new_network()
+                    self.state = 0
+
+                elif self.state == 3:
+                    self.train_network()
+                    self.state = 0
+
+        except Exception as e:
+            log.fatal()
+            self.ui.status("Error in Trainer Worker thread: {}".format(e))
+
+
+    def select_data(self):
+        """Select the data.
+
+        This has 3 steps
+        -----------------
+        * load numpy files and create a dataset
+        * load and prep model params
+        * create a new folder called work_dir/models/{game}/{game}model_{num}
+        * save the model
+        * combine dataset and model params and train dataset
+        * save again and confim
+        """
+        self.ui.status("Loading Dataset...")
+
+        files = self.ui.selection[0]
+        dataset = os.path.join(
+            self.ui.root_dir, "datasets", self.ui.currentGame, files)
+        self.ui.print_console("Selected {} as Training Data Path".format(dataset))
+        self.ui.print_console("Loading Dataset...")
+        self.active_dataset = self.data_prep.load_npz(dataset)
+        self.ui.actionButton.setEnabled(True)
+
+        self.ui.status("Dataset loaded.")
+        return True
+
+    def build_new_network(self):
+        self.ui.status("Building Network...")
+
+        #print(self.currentGame)
+        saveDir = os.path.join(self.ui.root_dir, "model", self.ui.currentGame)
+        self.ui.print_console("{}".format(saveDir))
+        model_fileName = "{}Model".format(self.ui.currentGame)
+        full_path = os.path.join(saveDir, model_fileName)
+        self.ui.print_console("{}".format(full_path))
+        try:
+            os.mkdir(full_path)
+        except Exception as e:
+            self.ui.print_console("{}".format(e))
+            try:
+                os.mkdir(saveDir)
+                os.mkdir(full_path)
+                pass
+            except Exception as e:
+                self.ui.print_console("{}".format(e))
+        self.ui.print_console("created a new directory {}".format(full_path))
+        self.model_network.save_network(full_path)
+        self.ui.print_console("this is working!")
+
+        self.ui.status("Network built.")
+
+    def train_network(self, iters=5):
+        self.ui.status("Training Network...")
+
+        tf = self.tf
+        saveDir = os.path.join(self.ui.root_dir, "model", self.ui.currentGame)
+        model_fileName = "{}Model".format(self.ui.currentGame)
+        model_path = os.path.join(saveDir, model_fileName)
+        self.ui.print_console("Loading Model From: {}".format(model_path))
+        sess = tf.InteractiveSession()
+        checkpoint_file = tf.train.latest_checkpoint(model_path)
+        print(checkpoint_file)
+        new_saver = tf.train.import_meta_graph(checkpoint_file + ".meta")
+        print("found metagraph")
+        sess.run(tf.global_variables_initializer())
+        print("init those variables")
+        new_saver.restore(sess, checkpoint_file)
+        self.ui.print_console("this is working!")
+        x = tf.get_collection('x_image')[0]
+        # y = tf.get_collection('y')[0]
+        y_ = tf.get_collection('y_')[0]
+        keep_prob = tf.get_collection('keep_prob')[0]
+        # loss = tf.get_collection('loss')[0]
+        train = tf.get_collection('train_op')[0]
+        # learn = tf.get_collection('learn_rate')[0]
+        global_step = tf.get_collection_ref('global_step')[0]
+        # writer = tf.summary.FileWriter(self.model_path)
+        self.ui.print_console("All variables loaded")
+
+        iters = 100
+        for i in range(iters):
+            batch = self.data_prep.next_batch(64)
+            self.ui.print_console("Got batch for iter {}".format(i+1))
+            feed_dict = {x: batch[0],
+                         y_: batch[1],
+                         keep_prob: 0.8}
+            sess.run(train, feed_dict=feed_dict)
+            g = sess.run(global_step)
+            self.ui.print_console("THIS IS WORKING!!! {}".format(g))
+            if i % int(iters/10):
+                new_saver.save(sess, model_path + '/Mupen64plus', global_step)
+            self.ui.print_console("this is SAVING!!!")
+        sess.close()
+
+        self.ui.status("Network trained.")
 
 
 class Trainer(AGBlank):
     """AG_Trainer Widget of MuPen64 Python Ui."""
 
-    def __init__(self, parent, worker):
+    def __init__(self, parent, status, worker):
         """Init Stuff."""
-        super().__init__(parent)
+        super().__init__(parent, status)
         self.parent = parent
         self.setWindowTitle('AG Trainer')
         self.selectorLabel.setText('Existing Save Folders:')
@@ -115,9 +249,12 @@ class Trainer(AGBlank):
         self.selector.setEnabled(False)
 
         # get references
-        self.trainer_thread = TfTraining(parent=self.parent)
+        self.process = Worker(self)
+        self.process.start()
+        '''
         self.data_prep = DataPrep()
         self.model_network = MupenNetwork()
+        '''
 
         # booleans
         self.processing = False
@@ -140,90 +277,6 @@ class Trainer(AGBlank):
         # Startup Processes
         self.getSaves()
 
-    """TEST FUNCTIONS"""
-
-    def select_data(self):
-        """Select the data.
-
-        This has 3 steps
-        -----------------
-        * load numpy files and create a dataset
-        * load and prep model params
-        * create a new folder called work_dir/models/{game}/{game}model_{num}
-        * save the model
-        * combine dataset and model params and train dataset
-        * save again and confim
-        """
-        files = self.selection[0]
-        dataset = os.path.join(
-            self.root_dir, "datasets", self.currentGame, files)
-        self.print_console("Selected {} as Training Data Path".format(dataset))
-        self.active_dataset = self.data_prep.load_npz(dataset)
-        self.print_console("Loading Dataset...")
-        self.actionButton.setEnabled(True)
-        return True
-
-    def build_new_network(self):
-        #print(self.currentGame)
-        saveDir = os.path.join(self.root_dir, "model", self.currentGame)
-        self.print_console("{}".format(saveDir))
-        model_fileName = "{}Model".format(self.currentGame)
-        full_path = os.path.join(saveDir, model_fileName)
-        self.print_console("{}".format(full_path))
-        try:
-            os.mkdir(full_path)
-        except Exception as e:
-            self.print_console("{}".format(e))
-            try:
-                os.mkdir(saveDir)
-                os.mkdir(full_path)
-                pass
-            except Exception as e:
-                self.print_console("{}".format(e))
-        self.print_console("created a new directory {}".format(full_path))
-        self.model_network.save_network(full_path)
-        self.print_console("this is working!")
-
-    def train_network(self, iters=5):
-
-        saveDir = os.path.join(self.root_dir, "model", self.currentGame)
-        model_fileName = "{}Model".format(self.currentGame)
-        model_path = os.path.join(saveDir, model_fileName)
-        self.print_console("Loading Model From: {}".format(model_path))
-        sess = tf.InteractiveSession()
-        checkpoint_file = tf.train.latest_checkpoint(model_path)
-        print(checkpoint_file)
-        new_saver = tf.train.import_meta_graph(checkpoint_file + ".meta")
-        print("found metagraph")
-        sess.run(tf.global_variables_initializer())
-        print("init those variables")
-        new_saver.restore(sess, checkpoint_file)
-        self.print_console("this is working!")
-        x = tf.get_collection('x_image')[0]
-        # y = tf.get_collection('y')[0]
-        y_ = tf.get_collection('y_')[0]
-        keep_prob = tf.get_collection('keep_prob')[0]
-        # loss = tf.get_collection('loss')[0]
-        train = tf.get_collection('train_op')[0]
-        # learn = tf.get_collection('learn_rate')[0]
-        global_step = tf.get_collection_ref('global_step')[0]
-        # writer = tf.summary.FileWriter(self.model_path)
-        self.print_console("All variables loaded")
-
-        iters = 100
-        for i in range(iters):
-            batch = self.data_prep.next_batch(64)
-            self.print_console("Got batch for iter {}".format(i+1))
-            feed_dict = {x: batch[0],
-                         y_: batch[1],
-                         keep_prob: 0.8}
-            sess.run(train, feed_dict=feed_dict)
-            g = sess.run(global_step)
-            self.print_console("THIS IS WORKING!!! {}".format(g))
-            if i % int(iters/10):
-                new_saver.save(sess, model_path + '/Mupen64plus', global_step)
-            self.print_console("this is SAVING!!!")
-        sess.close()
 
     """Selector FUNCTIONS"""
     def getSaves(self):
@@ -301,21 +354,20 @@ class Trainer(AGBlank):
     def on_actionButton_clicked(self):
         """Start Training the model"""
         # iters = self.input.text()
-        self.train_network()
-        pass
+        self.print_console("actionButton pressed!")
+        self.process.state = 3
 
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        self.select_data()
-        pass
+        self.print_console("checkButton pressed!")
+        self.process.state = 1
 
     @pyqtSlot()
     def on_check2Button_clicked(self):
         """Test Button for pressing broken parts"""
-        self.build_new_network()
-        self.print_console("check2button pressed!")
-        pass
+        self.print_console("check2Button pressed!")
+        self.process.state = 2
 
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):

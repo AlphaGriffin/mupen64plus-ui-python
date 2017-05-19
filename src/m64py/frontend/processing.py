@@ -35,7 +35,7 @@ CONVERSION SOFTWARE:
         release.
 """.format(VERSION,)
 
-class Prepare(QThread):
+class Worker(QThread):
     """ 
     This will be used by both the Process and Playback Modules for conversion
     of images for Tensorflow.
@@ -122,7 +122,7 @@ class Prepare(QThread):
     def gamepadImageMatcher(self, path):
         """
         - SAW - matches gamepad csv data rows to images based on timestamps
-        Params: A path with timestamped pictures and a ti1estamped .csv of
+        Params: A path with timestamped pictures and a timestamped .csv of
                 different lenghs.
         Returns: two arrays of matched length img, labels.
         """
@@ -235,7 +235,7 @@ class Processing(AGBlank):
         self.selectingRom = True
         
         # Use the processor
-        self.process = Prepare(self)
+        self.process = Worker(self)
         self.worker = worker
         self.work_dir = self.worker.core.config.get_path("UserData")
         self.root_dir = self.work_dir

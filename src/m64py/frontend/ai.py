@@ -114,8 +114,9 @@ class DRecorder(AGDeferred):
         AGDeferred.__init__(self, dashboard, "Record")
 
     def load(self):
-        from m64py.frontend.recorder import Recorder
-        recorder = Recorder(self.dashboard, self.dashboard.status, self.dashboard.worker)
+        import m64py.frontend.recorder as frontend
+        reload(frontend)
+        recorder = frontend.Recorder(self.dashboard, self.dashboard.status, self.dashboard.worker)
         self.dashboard.recorder = recorder
         return recorder
 
@@ -143,8 +144,10 @@ class DTrainer(AGDeferred):
         AGDeferred.__init__(self, dashboard, "Train")
 
     def load(self):
-        from m64py.frontend.trainer import Trainer
-        trainer = Trainer(self.dashboard, self.dashboard.worker)
+        import m64py.frontend.trainer as frontend
+        reload(frontend)
+        trainer = frontend.Trainer(self.dashboard, self.dashboard.status, self.dashboard.worker)
+        trainer.process.start()
         self.dashboard.trainer = trainer
         return trainer
 
@@ -157,8 +160,9 @@ class DPlayer(AGDeferred):
         AGDeferred.__init__(self, dashboard, "Play")
 
     def load(self):
-        from m64py.frontend.player import Player
-        player = Player(self.dashboard, self.dashboard.worker, self.dashboard.settings)
+        import m64py.frontend.player as frontend
+        reload(frontend)
+        player = frontend.Player(self.dashboard, self.dashboard.worker, self.dashboard.settings)
         self.dashboard.player = player
         return player
 
@@ -172,8 +176,9 @@ class DTester(AGDeferred):
         AGDeferred.__init__(self, dashboard, "Play (TEST)")
 
     def load(self):
-        from m64py.frontend.recorder_player import Player
-        player = Player(self.dashboard, self.dashboard.worker)
+        import m64py.frontend.recorder_player as frontend
+        reload(frontend)
+        player = frontend.Player(self.dashboard, self.dashboard.worker)
         self.dashboard.player = player
         return player
 
