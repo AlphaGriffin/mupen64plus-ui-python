@@ -115,7 +115,7 @@ class DRecorder(AGDeferred):
 
     def load(self):
         from m64py.frontend.recorder import Recorder
-        recorder = Recorder(self.dashboard, self.dashboard.worker)
+        recorder = Recorder(self.dashboard, self.dashboard.status, self.dashboard.worker)
         self.dashboard.recorder = recorder
         return recorder
 

@@ -41,14 +41,11 @@ better you can train your model.
 
 class Recorder(AGBlank):
     """AG_Recorder Widget of MuPen64 Python Ui"""
-    def __init__(self, parent, worker):
+    def __init__(self, parent, status, worker):
         log.debug()
         # init
-        super().__init__(parent)
+        super().__init__(parent, status)
         self.setWorker(worker)   # get this from MUPEN core
-        '''
-        self.pad = xpad()        # get a controller instance
-        '''
 
         # set up the blanks
         self.setWindowTitle('AG Recorder')
@@ -85,7 +82,7 @@ class Recorder(AGBlank):
         name = self.getGame()
         name_path = os.path.join(self.work_dir, "training", name)
         if not os.path.isdir(name_path):
-            print ("path does not exist, creating it now: {}".format(
+            log.debug ("path does not exist, creating it now: {}".format(
                    name_path))
             os.makedirs(name_path)
         self.print_console("Good Choice with {}, Good luck!".format(name))
@@ -107,50 +104,12 @@ class Recorder(AGBlank):
             self.selector.addItem(x)
         self.selector.addItem("Record a New Game")
 
-    '''
-    def save_data(self, test=False):
-        """
-        Create data.csv - Timestamp, { 0.0, 0.0, 0, 0, 0 }
-        """
-        paddle_read = self.pad.read()
-        stamp = int(time.time() * 1000)
-        y = ("{}:\t{}".format(stamp,paddle_read))
-        if test is False:
-            # make / open outfile
-            outfileName = os.path.join(self.save_name, 'data.csv')
-            print("".format(outfileName))
-            outfile = open(outfileName, 'a')
-
-            # write line
-            outfile.write('{},{}\n'.format(stamp, ','.join(
-                          map(str, paddle_read))))
-            outfile.close()
-        self.print_console(y)
-    '''
-
     def getGame(self):
         """Check if game has been selected and set a dir if it has"""
         x = self.check_game_name = self.worker.core.rom_header.Name.decode().replace(" ", "_").lower()
         if x is not "":
             return x
         return "no_game"
-
-    '''
-    def startupTimer(self):
-        """Start a timer if none is running and keep checking back"""
-        # start game checker
-        if self.runningTimer == False:
-            self.print_console("Start a Game to begin, dont record til you are in gameplay")
-            self.runningTimer = QTimer(self)
-            self.runningTimer.timeout.connect(self.check_game) # takes the pick and saves data
-            self.runningTimer.start(200)    # in millis
-
-    def shutdownTimer(self):
-        """Shuts down the timer when we don't need it (dialog hidden, etc.)"""
-        if not self.runningTimer == False:
-            self.runningTimer.stop()
-            self.runningTimer = False
-    '''
 
     def check_game(self):
         """Check mupen worker and see if hes working, called by runningTimer"""
@@ -171,6 +130,7 @@ class Recorder(AGBlank):
 
     def record(self):
         """this starts the recording timer and actionable function"""
+        self.status("Recording...")
         self.print_console("Starting Recording")
         self.actionButton.setText('Stop')
         self.save_name = self.input.text()
@@ -178,11 +138,6 @@ class Recorder(AGBlank):
         if not os.path.isdir(self.save_name):
             os.makedirs(self.save_name)
 
-        '''
-        self.poll_time = QTimer(self)
-        self.poll_time.timeout.connect(self.save_data) # takes the pick and saves data
-        self.poll_time.start(50)    # in millis
-        '''
         self.worker.toggle_autoshots()
         self.recording = True
         self.recordStartedAt = time.time()*1000.0
@@ -190,6 +145,7 @@ class Recorder(AGBlank):
     def stop(self):
         """This ends the recording session and buttons up the screenshot dir"""
         if self.recording:
+            self.status("Done recording.")
             '''
             self.poll_time.stop()
             '''
@@ -202,24 +158,49 @@ class Recorder(AGBlank):
 
             self.set_save_dir()
             self.recording = False
+            self.get_controllers()
             self.get_images()
 
-    def get_images(self):
-        """This moves all the screenshots to the current save_dir"""
-        print ("in get_images()")
-        shot_dir = os.path.join(self.work_dir,"screenshot/")
-        print ("about to list dir: {}".format(shot_dir))
-        x = os.listdir(shot_dir)
-        print ("got stuff: {}".format(x))
+    def get_controllers(self):
+        """This moves all the controller input logs to the current save_dir"""
+        log.debug()
+        input_dir = os.path.join(self.work_dir,"input/")
+        log.debug ("about to list dir: {}".format(input_dir))
+        x = os.listdir(input_dir)
+        log.debug ("got stuff: {}".format(x))
         if len(x) > 0:
             y = []
             for i in x:
                 y.append(i)
-                #print(shot_dir+i)
+                #log.debug(input_dir+i)
+
+                mv_from = os.path.join(input_dir, i)
+                mv_to = self.save_name
+                log.debug ("moving: {} -> {}".format(mv_from, mv_to))
+                shutil.move(mv_from, mv_to)
+
+            self.print_console("Got {} input logs, moved to {}".format(len(y),self.save_name))
+
+        else:
+            self.checkButton.setEnabled(True)
+            self.print_console("No Inputs Saved")
+
+    def get_images(self):
+        """This moves all the screenshots to the current save_dir"""
+        log.debug()
+        shot_dir = os.path.join(self.work_dir,"screenshot/")
+        log.debug ("about to list dir: {}".format(shot_dir))
+        x = os.listdir(shot_dir)
+        log.debug ("got stuff: {}".format(x))
+        if len(x) > 0:
+            y = []
+            for i in x:
+                y.append(i)
+                #log.debug(shot_dir+i)
 
                 mv_from = os.path.join(shot_dir, i)
                 mv_to = self.save_name
-                print ("moving: {} -> {}".format(mv_from, mv_to))
+                log.debug ("moving: {} -> {}".format(mv_from, mv_to))
                 shutil.move(mv_from, mv_to)
 
             self.print_console("Got {} images, moved to {}".format(len(y),self.save_name))

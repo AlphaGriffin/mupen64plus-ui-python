@@ -48,14 +48,17 @@ class Prepare(QThread):
     def run(self):
         log.debug()
         try:
-            self.ui.status("Beginning processing...")
+            self.ui.status("Processing...")
             import numpy as np
-            from PIL import Image
 
             folders = self.folders
             if folders is "": 
                 folders = self.ui.selection
-            saveDir = os.path.join(self.ui.root_dir, "datasets", self.ui.currentGame)
+            saveDir = os.path.join(self.ui.root_dir, "datasets")
+            if not os.path.isdir(saveDir):
+                self.ui.print_console("Creating folder: {}".format(saveDir))
+                os.mkdir(saveDir)
+            saveDir = os.path.join(saveDir, self.ui.currentGame)
             if not os.path.isdir(saveDir):
                 self.ui.print_console("Creating folder: {}".format(saveDir))
                 os.mkdir(saveDir)
@@ -77,6 +80,7 @@ class Prepare(QThread):
                 self.ui.print_console("# Processing folder: {}".format(current_path))
                 self.ui.print_console("# Step 1: Assert #imgs == #labels")
                 labels, imgs = self.gamepadImageMatcher(current_path)
+                log.info("Input and Image matching completed", inputs=len(labels), images=len(imgs))
                 dataset_y.append(labels) # BOOM!
                 self.ui.print_console("# Step 2: Convert img to BW np array of (x,y)")
                 for image in imgs:
@@ -101,10 +105,13 @@ class Prepare(QThread):
 
     def make_BW(self,rgb):
         """ This is the "rec601 luma" algorithm to compute 8-bit greyscale """
+        import numpy as np
         return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
     
     def prepare_image(self, img, makeBW=False):
         """ This resizes the image to a tensorflowish size """
+        import numpy as np
+        from PIL import Image
         pil_image = Image.open(img)                       # open img
         x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
         numpy_img = np.array(x)                           # convert to numpy 
@@ -121,7 +128,7 @@ class Prepare(QThread):
         """
                 
         # Open CSV for reading
-        csv_path = os.path.join(path, "data.csv")
+        csv_path = os.path.join(path, "controller0.dat")
         csv_io = open(csv_path, 'r')
         
         # Convert to a true array
@@ -168,7 +175,7 @@ class Prepare(QThread):
                 lastKeptWasImage = True
                 
                 # We just kept an image, so we need to keep a
-                #corresponding input row too
+                # corresponding input row too
                 while csv:
                     line = csv.pop(0)
                     csvtime = int(line[0])

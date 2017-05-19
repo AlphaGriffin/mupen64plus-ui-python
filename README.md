@@ -8,9 +8,8 @@
         http://m64py.sourceforge.net
         A frontend for Mupen64Plus
 
-              _              ___  _  ___  __  __ ___
-     /\  |   |_| |_|  /\     | _ |_|  |  |_  |_   |  |\ |
-    /--\ |__ |   | | /--\    |_| | \ _|_ |   |   _|_ | \|
+
+    /-\  |_  |*  |-|  /-\        {_,  |`  |  |= |=  |  |\|
 
         Alpha Griffin Edition
         http://alphagriffin.com
