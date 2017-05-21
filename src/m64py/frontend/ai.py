@@ -14,26 +14,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from imp import reload
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QDialog
 from m64py.ui.ai_ui import Ui_AIDashboard
 from m64py.frontend.agdeferred import AGDeferred
-from imp import reload
-
 import ag.logging as log
 
 
-
-#
-# The Alpha Griffin Aritificial Intelligence Dashboard
-#
-
 class AIDashboard(QDialog, Ui_AIDashboard):
-    def __init__(self, parent, worker, settings):
-        """ @param parent   QDialog (mainwindow)
-            @param worker   Mupen worker object
-            @param settings Settings dialog instance from mainwindow """
+    """The Alpha Griffin Aritificial Intelligence Dashboard."""
 
+    def __init__(self, parent, worker, settings):
+        """Alphagriffin Module Loader.
+
+        @param parent   QDialog (mainwindow)
+        @param worker   Mupen worker object
+        @param settings Settings dialog instance from mainwindow
+        """
         log.info("Initializing Alpha Griffin Artificial Intelligence Dashboard")
         QDialog.__init__(self, parent)
         self.setupUi(self)
@@ -51,7 +49,7 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         self.dprocessing = DProcessing(self)
         self.dtrainer = DTrainer(self)
         self.dplayer = DPlayer(self)
-        self.dtester = DTester(self) # FIXME just testing
+        self.dtester = DTester(self)  # FIXME just testing
 
         self.nextTabButton.setEnabled(True)
         self.status.setText("Ready (loading deferred).")
@@ -107,7 +105,6 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         self.tabster.setCurrentIndex(index)
 
 
-
 class DRecorder(AGDeferred):
     def __init__(self, dashboard):
         log.debug()
@@ -121,8 +118,6 @@ class DRecorder(AGDeferred):
         return recorder
 
 
-
-
 class DProcessing(AGDeferred):
     def __init__(self, dashboard):
         log.debug()
@@ -134,8 +129,6 @@ class DProcessing(AGDeferred):
         processing = frontend.Processing(self.dashboard, self.dashboard.status, self.dashboard.worker)
         self.dashboard.processing = processing
         return processing
-
-
 
 
 class DTrainer(AGDeferred):
@@ -152,8 +145,6 @@ class DTrainer(AGDeferred):
         return trainer
 
 
-
-
 class DPlayer(AGDeferred):
     def __init__(self, dashboard):
         log.debug()
@@ -165,8 +156,6 @@ class DPlayer(AGDeferred):
         player = frontend.Player(self.dashboard, self.dashboard.worker, self.dashboard.settings)
         self.dashboard.player = player
         return player
-
-
 
 
 # FIXME: just testing
@@ -181,5 +170,3 @@ class DTester(AGDeferred):
         player = frontend.Player(self.dashboard, self.dashboard.worker)
         self.dashboard.player = player
         return player
-
-

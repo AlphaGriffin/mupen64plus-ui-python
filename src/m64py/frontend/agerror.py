@@ -14,18 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from PyQt5.QtWidgets import QWidget
-from m64py.ui.agerror_ui import Ui_AGError
 from PyQt5.QtGui import QTextCursor
-import os
-
+from m64py.ui.agerror_ui import Ui_AGError
 import ag.logging as log
 
+
 class AGError(QWidget, Ui_AGError):
+    """AGError PyQt5 widget."""
+
     def __init__(self, parent, details):
+        """An AGError PyQt5 widget."""
         log.debug("AGError::__init__()")
         QWidget.__init__(self, parent)
         self.setupUi(self)
         self.details.setPlainText(details)
-

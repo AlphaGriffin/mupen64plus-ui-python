@@ -14,15 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import ag.logging as log
 import traceback
-
-
+import ag.logging as log
 from m64py.frontend.agerror import AGError
 
+
 class AGDeferred():
+    """Defer loading Alphagriffin UI."""
+
     def __init__(self, dashboard, tabname):
+        """Defer loading Alphagriffin UI."""
         log.debug()
 
         self.loaded = False
@@ -31,7 +32,10 @@ class AGDeferred():
         self.tabindex = -1
 
     def check(self):
-        """Load ourselves by calling load() (only if we need to) while gracefully handling errors."""
+        """Load ourselves by calling load().
+
+        Only if we need to while gracefully handling errors.
+        """
         log.debug()
 
         if self.loaded:
@@ -44,9 +48,13 @@ class AGDeferred():
 
             if self.tabindex >= 0:
                 self.dashboard.tabster.removeTab(self.tabindex)
-                self.tabindex = self.dashboard.tabster.insertTab(self.tabindex, widget, self.tabname)
+                self.tabindex = self.dashboard.tabster.insertTab(
+                    self.tabindex, widget, self.tabname
+                    )
             else:
-                self.tabindex = self.dashboard.tabster.addTab(widget, self.tabname)
+                self.tabindex = self.dashboard.tabster.addTab(
+                    widget, self.tabname
+                    )
 
             self.dashboard.status.setText("Ready.")
             self.loaded = True
@@ -74,6 +82,5 @@ class AGDeferred():
             return self.check()
 
     def load(self):
-        """Subclasses implement this function to actually do something."""
+        """Subclass implemention."""
         pass
-

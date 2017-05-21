@@ -14,22 +14,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-from PyQt5.QtWidgets import QDialog#, QWidget
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas # this is breaking it!
-from matplotlib.figure import Figure
-from m64py.ui.plotter_ui import Ui_Plotter
 import numpy as np
 import matplotlib
-matplotlib.use("Qt5Agg")
-from PyQt5 import QtCore
 import pygame
-
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import QDialog  # QWidget
+from matplotlib.backends.backend_qt5agg import\
+    FigureCanvasQTAgg as FigureCanvas  # this is breaking it!
+from matplotlib.figure import Figure
+from m64py.ui.plotter_ui import Ui_Plotter
 import ag.logging as log
+matplotlib.use("Qt5Agg")
+
 
 class xpad(object):
-    """Example pygame controller read"""
-    def __init__(self,options=None):
+    """Example pygame controller read."""
+
+    def __init__(self, options=None):
+        """Example pygame controller read."""
         try:
             pygame.init()
             self.joystick = pygame.joystick.Joystick(0)
@@ -37,13 +39,14 @@ class xpad(object):
         except:
             print('unable to connect to Xbox Controller')
             self.joystick = None
-            
+
     def read(self):
+        """Read attached joystick."""
         if not self.joystick:
             return None
 
         pygame.event.pump()
-        
+
         # left stick
         L_x_axis = self.joystick.get_axis(0)
         L_y_axis = self.joystick.get_axis(1)
@@ -60,16 +63,21 @@ class xpad(object):
         #return[L_x_axis,L_y_axis,R_x_axis,R_y_axis,x_btn,a_btn,b_btn,y_btn,rb]
         #return [x, y, a, b, rb]
         return [L_x_axis, L_y_axis, a_btn, b_btn, rb]
-        
+
     def manual_override(self):
+        """Override game controller."""
         pygame.event.pump()
         return self.joystick.get_button(4) == 1
 
 
 class paddle_graph(FigureCanvas):
-    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
+    """Ultimately, this is a QWidget.
+
+    (as well as a FigureCanvasAgg, etc.).
+    """
+
     def __init__(self, parent=None, layout=None, width=5, height=4, dpi=100):
-        
+        """Init the paddle graph."""
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         FigureCanvas.__init__(self, self.fig)
         self.controller = xpad()
@@ -77,61 +85,75 @@ class paddle_graph(FigureCanvas):
         self.setParent(parent)
         layout.addWidget(self)
         self.setup_grapth()
-        
+
         # Wait to turn the timer on until we need it, i.e. when the dialog is shown,
         #   otherwise the mainwindow isn't quite ready yet and things crash
         #self.timerOn()
-        
-        
-    def setup_grapth(self):     
-        self.plotMem = 50                                # how much data to keep on the plot
-        self.plotData = [[0] * (5)] * self.plotMem       # mem storage for plot
-        self.axes = self.fig.add_subplot(111)        
-        #print("changes")
-                
+
+    def setup_grapth(self):
+        """Setup matplotlib graph."""
+        self.plotMem = 50  # how much data to keep on the plot
+        self.plotData = [[0] * (5)] * self.plotMem  # mem storage for plot
+        self.axes = self.fig.add_subplot(111)
+        # print("changes")
+
     def timerOn(self):
-        """Starts a QTimer for paddle polling"""
+        """Start a QTimer for paddle polling."""
         self.padTimer = QtCore.QTimer(self)
         self.padTimer.timeout.connect(self.update_figure)
         self.padTimer.start(100)
-        
+
     def timerOff(self):
-        """Stops the QTimer for paddle polling"""
+        """Stop the QTimer for paddle polling."""
         self.padTimer.stop()
-        
+
     def update_figure(self):
-        """This is called by the Timer Function"""
+        """Called by the Timer Function."""
         self.controller_data = self.controller.read()
 
         if self.controller_data:
-            self.plotData.append(self.controller_data) # adds to the end of the list
-            self.plotData.pop(0) # remove the first item in the list, ie the oldest
-            
+            # adds to the end of the list
+            self.plotData.append(self.controller_data)
+            # remove the first item in the list, ie the oldest
+            self.plotData.pop(0)
+
             x = np.asarray(self.plotData)
-            self.axes.plot(range(0,self.plotMem), x[:,0], 'r')
+            self.axes.plot(range(0, self.plotMem),
+                           x[:, 0], 'r')
             self.axes.hold(True)
-            self.axes.plot(range(0,self.plotMem), x[:,1], 'b')
-            self.axes.plot(range(0,self.plotMem), x[:,2], 'g')
-            self.axes.plot(range(0,self.plotMem), x[:,3], 'k')
-            self.axes.plot(range(0,self.plotMem), x[:,4], 'y')
+            self.axes.plot(range(0, self.plotMem),
+                           x[:, 1], 'b')
+            self.axes.plot(range(0, self.plotMem),
+                           x[:, 2], 'g')
+            self.axes.plot(range(0, self.plotMem),
+                           x[:, 3], 'k')
+            self.axes.plot(range(0, self.plotMem),
+                           x[:, 4], 'y')
             self.axes.hold(False)
             self.draw()
         else:
             log.debug("no input to graph")
 
+
 class Plotter(QDialog, Ui_Plotter):
-    """Construct from the .ui file"""
+    """Construct from the .ui file."""
+
     def __init__(self, parent=None):
+        """Init PyQt5 display."""
         QDialog.__init__(self, parent)
         self.setupUi(self)
-        self.graph = paddle_graph(self.graph_widget, self.graph_layout, width=6, height=4, dpi=125)
-    
+        self.graph = paddle_graph(
+            self.graph_widget,
+            self.graph_layout,
+            width=6, height=4, dpi=125
+            )
+
     def show(self):
-        """Do open window"""
+        """Do open window."""
         super().show()
         self.graph.timerOn()
-        
+
     def hide(self):
-        """Do Close Window"""
+        """Do Close Window."""
         super().hide()
         self.graph.timerOff()

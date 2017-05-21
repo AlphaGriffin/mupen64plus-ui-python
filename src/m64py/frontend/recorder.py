@@ -14,34 +14,37 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from m64py.frontend.agblank import AGBlank
+import os
+import sys
+import time
+import shutil
 from PyQt5.QtCore import pyqtSlot
-import os, sys, pygame, time, shutil
-
+from m64py.frontend.agblank import AGBlank
 import ag.logging as log
 
 VERSION = sys.version
-
-# FIXME
 INTRO =\
-"""Recording Console by: AlphaGriffin.com.
+    """Recording Console by: AlphaGriffin.com.
 
-Built in python 3.6
-You are running: {0:2}
-Step 1: Start a ROM and get past the menus and into the game and pause it.
-Step 2: press the check if game is running button for non-async...
-Step 3: Press record and go on to enjoy your game.
-Step 4: When you exit out of the game the Recording will automatically stop.
-step 5: Move on to the Processing Console.
+    Built in python 3.6
+    You are running: {0:2}
+    Step 1: Start a ROM, then begin the game and pause it.
+    Step 2: If record button does come on, press check.
+    Step 3: Press record and go on to enjoy your game.
+    Step 4: Move on the next screen for the next step.
 
-Notes: if you are racing, you can stop the recording between races and just click
-record again and keep playing. The more you contribute to the dataset, the
-better you can train your model.
-""".format(VERSION)
+    Notes: if you are racing, you can stop the recording
+    between races and just click record again and keep playing.
+    The more you contribute to the dataset, the better
+    you can train your model.
+    """.format(VERSION)
+
 
 class Recorder(AGBlank):
-    """AG_Recorder Widget of MuPen64 Python Ui"""
+    """AG_Recorder Widget of MuPen64 Python Ui."""
+
     def __init__(self, parent, status, worker):
+        """Set global references."""
         log.debug()
         # init
         super().__init__(parent, status)
@@ -56,7 +59,7 @@ class Recorder(AGBlank):
         self.checkButton.setEnabled(True)
         self.checkButton.setText('Check')
         self.check2Button.setEnabled(False)
-        self.check2Button.setText('thing2')
+        self.check2Button.setText('unused')
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
 
@@ -72,47 +75,59 @@ class Recorder(AGBlank):
         self.selectedSaveName = None
         self.path = ""
         self.check_game_name = ""
+        self.save_name = ""
 
         # startup
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
 
     def set_save_dir(self):
-        """Sets the Input Field text"""
+        """Set the input field text."""
         name = self.getGame()
         name_path = os.path.join(self.work_dir, "training", name)
         if not os.path.isdir(name_path):
-            log.debug ("path does not exist, creating it now: {}".format(
-                   name_path))
+            log.debug("path does not exist, creating it now: {}".format(name_path))
             os.makedirs(name_path)
         self.print_console("Good Choice with {}, Good luck!".format(name))
 
         self.build_selector(name_path)
 
-        l = len(os.listdir(name_path))
-        path = "newGame_{}".format(l)
+        folder_len = len(os.listdir(name_path))
+        path = "newGame_{}".format(folder_len)
         msg = "Ready to Save in Directory:"
-        self.print_console("{}\n{}".format(msg, os.path.join(name_path,path)))
-        self.input.setText(os.path.join(name_path,path))
+        self.print_console("{}\n{}".format(
+            msg, os.path.join(name_path, path)
+            ))
+        self.input.setText(os.path.join(
+            name_path, path
+            ))
         self.actionButton.setEnabled(True)
 
     def build_selector(self, folder):
-        """This populates the save folder list"""
+        """Populate the save folder list."""
         self.selector.clear()
         for i in sorted(os.listdir(folder)):
-            x = "{}".format(i)
-            self.selector.addItem(x)
+            listitem = "{}".format(i)
+            self.selector.addItem(listitem)
         self.selector.addItem("Record a New Game")
 
     def getGame(self):
-        """Check if game has been selected and set a dir if it has"""
-        x = self.check_game_name = self.worker.core.rom_header.Name.decode().replace(" ", "_").lower()
-        if x is not "":
-            return x
+        """Check if game has been selected.
+
+        Set a dir if it has.
+        """
+        self.check_game_name = self.worker.core.rom_header.Name.decode().replace(
+            " ", "_"
+            ).lower()
+        if self.check_game_name is not "":
+            return self.check_game_name
         return "no_game"
 
     def check_game(self):
-        """Check mupen worker and see if hes working, called by runningTimer"""
+        """Check mupen worker and see if hes working.
+
+        called by runningTimer.
+        """
         wasloaded = self.game_on
         self.worker.core_state_query(1)
         loaded = self.worker.state in [2, 3]
@@ -129,7 +144,7 @@ class Recorder(AGBlank):
                 self.set_save_dir()
 
     def record(self):
-        """this starts the recording timer and actionable function"""
+        """Start the recording timer and action functions."""
         self.status("Recording...")
         self.print_console("Starting Recording")
         self.actionButton.setText('Stop')
@@ -143,12 +158,13 @@ class Recorder(AGBlank):
         self.recordStartedAt = time.time()*1000.0
 
     def stop(self):
-        """This ends the recording session and buttons up the screenshot dir"""
+        """End the recording session.
+
+        Also buttons up the screenshot dir.
+        """
         if self.recording:
             self.status("Done recording.")
-            '''
-            self.poll_time.stop()
-            '''
+            # self.poll_time.stop()
             self.worker.toggle_autoshots()
             self.actionButton.setText('Record')
 
@@ -162,87 +178,98 @@ class Recorder(AGBlank):
             self.get_images()
 
     def get_controllers(self):
-        """This moves all the controller input logs to the current save_dir"""
+        """Move all the controller input logs.
+
+        To the current save_dir.
+        """
         log.debug()
-        input_dir = os.path.join(self.work_dir,"input/")
-        log.debug ("about to list dir: {}".format(input_dir))
+        input_dir = os.path.join(self.work_dir, "input/")
+        log.debug("about to list dir: {}".format(input_dir))
         x = os.listdir(input_dir)
-        log.debug ("got stuff: {}".format(x))
+        log.debug("got stuff: {}".format(x))
         if len(x) > 0:
             y = []
             for i in x:
                 y.append(i)
-                #log.debug(input_dir+i)
-
+                # log.debug(input_dir+i)
                 mv_from = os.path.join(input_dir, i)
                 mv_to = self.save_name
-                log.debug ("moving: {} -> {}".format(mv_from, mv_to))
+                log.debug("moving: {} -> {}".format(
+                    mv_from, mv_to
+                    ))
                 shutil.move(mv_from, mv_to)
 
-            self.print_console("Got {} input logs, moved to {}".format(len(y),self.save_name))
+            self.print_console(
+                "Got {} input logs, moved to {}".format(
+                    len(y), self.save_name
+                    ))
 
         else:
             self.checkButton.setEnabled(True)
             self.print_console("No Inputs Saved")
 
     def get_images(self):
-        """This moves all the screenshots to the current save_dir"""
+        """Move all the screenshots to the current save_dir."""
         log.debug()
-        shot_dir = os.path.join(self.work_dir,"screenshot/")
-        log.debug ("about to list dir: {}".format(shot_dir))
+        shot_dir = os.path.join(self.work_dir,
+                                "screenshot/")
+        log.debug("about to list dir: {}".format(shot_dir))
         x = os.listdir(shot_dir)
-        log.debug ("got stuff: {}".format(x))
+        log.debug("got stuff: {}".format(x))
         if len(x) > 0:
             y = []
             for i in x:
                 y.append(i)
-                #log.debug(shot_dir+i)
-
+                # log.debug(shot_dir+i)
                 mv_from = os.path.join(shot_dir, i)
                 mv_to = self.save_name
-                log.debug ("moving: {} -> {}".format(mv_from, mv_to))
+                log.debug("moving: {} -> {}".format(
+                    mv_from, mv_to
+                    ))
                 shutil.move(mv_from, mv_to)
 
-            self.print_console("Got {} images, moved to {}".format(len(y),self.save_name))
-
+            self.print_console(
+                "Got {} images, moved to {}".format(
+                    len(y),
+                    self.save_name
+                    ))
         else:
             self.checkButton.setEnabled(True)
             self.print_console("No ScreenShots Saved")
 
     def show(self):
-        """ default show command """
-        '''
-        self.startupTimer()
-        '''
-        super().show()
+        """Default show command."""
+        # self.startupTimer()
+        pass
 
     def hide(self):
-        """ This stops recording on game close """
-        '''
-        self.shutdownTimer()
-        '''
+        """Stop recording on game close."""
+        # self.shutdownTimer()
         self.stop()
         super().hide()
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
-        """Start - Stop record button"""
-        if not self.recording: self.record()
-        else: self.stop()
+        """Start, stop record button."""
+        if not self.recording:
+            self.record()
+        else:
+            self.stop()
 
     @pyqtSlot()
     def on_checkButton_clicked(self):
-        """check constitution of system"""
+        """check constitution of system."""
         self.check_game()
         self.print_console("Checking Record Readiness.")
+        pass
 
     @pyqtSlot()
     def on_check2Button_clicked(self):
-        """Test Button for pressing broken parts"""
-        self.print_console("null")
+        """Test Button for pressing broken parts."""
+        pass
 
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self): pass
 
     @pyqtSlot()
-    def closeEvent(self,event=False): pass
+    def closeEvent(self, event=False): pass

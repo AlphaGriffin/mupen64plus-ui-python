@@ -14,34 +14,42 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from PyQt5.QtWidgets import QWidget
-from m64py.ui.agblank_ui import Ui_AGBlank
-from PyQt5.QtGui import QTextCursor
 import os
-
+from PyQt5.QtWidgets import QWidget
+from PyQt5.QtGui import QTextCursor
+from m64py.ui.agblank_ui import Ui_AGBlank
 import ag.logging as log
 
-# Abstract class for the record/playback interfaces
-#
-# You could add code here that all the interfaces that extend this class
-# would find useful.
 
 class AGBlank(QWidget, Ui_AGBlank):
+    """Abstract class for the record/playback interfaces.
+
+    You could add code here that all the interfaces that
+    extend this class would find useful.
+    """
+
     def __init__(self, parent=None, status=None):
+        """Init an AGBlank PyQt5 page."""
         log.debug()
         QWidget.__init__(self, parent)
         self.setupUi(self)
         self.statusWidget = status
         self.work_dir = None
+        self.worker = None
+        self.root_dir = None
 
     def print_console(self, msg):
-        """Takes a String and prints to console"""
+        """Print string to console."""
         self.console.moveCursor(QTextCursor.End)
         self.console.insertPlainText("{}\n".format(msg))
         print(msg)
 
     def setWorker(self, worker, work_dir=None):
-        """Get Worker from main code and check the local Userdata folder"""
+        """Take Global reference.
+
+        Get Worker from main code and check the local
+        Userdata folder.
+        """
         log.debug()
         self.worker = worker
         self.root_dir = self.worker.core.config.get_path("UserData")
@@ -56,7 +64,6 @@ class AGBlank(QWidget, Ui_AGBlank):
         log.info("work dir set to: {}".format(self.work_dir))
 
     def status(self, msg):
-        """Update status message"""
+        """Update status message."""
         if self.statusWidget is not None:
             self.statusWidget.setText(msg)
-

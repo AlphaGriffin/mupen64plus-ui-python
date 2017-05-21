@@ -16,17 +16,13 @@
 
 import os
 import sys
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 from m64py.frontend.agblank import AGBlank
-pyVERSION = sys.version
-
 import ag.logging as log
 
-INTRO = """This is a test.
-
-Tensorflow Model Creation and Training SOFTWARE:
+pyVERSION = sys.version
+INTRO = """Tensorflow Model Creation and Training SOFTWARE.
     Python Version: {}
     Step 1 - Choose a Dataset.
 
@@ -277,15 +273,13 @@ class Trainer(AGBlank):
         # Startup Processes
         self.getSaves()
 
-
-    """Selector FUNCTIONS"""
     def getSaves(self):
         """Create a list of Datasets for the selected game."""
         try:
             self.gamesList = os.listdir(self.work_dir)
         except Exception:
-            self.print_console("Source path does not exist: {}".format(
-                               self.work_dir))
+            self.print_console(
+                "Source path does not exist: {}".format(self.work_dir))
             return
 
         self.selector.setEnabled(True)
@@ -331,7 +325,7 @@ class Trainer(AGBlank):
         # click on the button!!!
 
     def build_selector(self, folder=""):
-        """This populates the save folder list"""
+        """This populates the save folder list."""
         self.selector.clear()
         if not self.selectingRom or folder is not "":
             self.selector.addItem("../")
@@ -340,37 +334,37 @@ class Trainer(AGBlank):
         else:
             for i in self.gamesList:
                 self.selector.addItem("{}".format(i))
-        """then we need to be selecting folders to process"""
 
     def show(self):
-        """On Show this window"""
-        super().show()
+        """On Show this window."""
+        pass
 
     def hide(self):
-        """On hide this window"""
-        super().hide()
+        """On hide this window."""
+        pass
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
-        """Start Training the model"""
+        """Start Training the model."""
         # iters = self.input.text()
         self.print_console("actionButton pressed!")
         self.process.state = 3
 
     @pyqtSlot()
     def on_checkButton_clicked(self):
-        """Test Button for pressing broken parts"""
+        """Test Button for pressing broken parts."""
         self.print_console("checkButton pressed!")
         self.process.state = 1
 
     @pyqtSlot()
     def on_check2Button_clicked(self):
-        """Test Button for pressing broken parts"""
+        """Test Button for pressing broken parts."""
         self.print_console("check2Button pressed!")
         self.process.state = 2
 
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
+        """Address the selectorator."""
         self.selected = self.selector.selectedItems()
         if len(self.selected) > 0:
             self.selecterator()
@@ -378,4 +372,5 @@ class Trainer(AGBlank):
         self.actionButton.setEnabled(False)
 
     @pyqtSlot()
-    def closeEvent(self, event=False): pass
+    def closeEvent(self, event=False):
+        pass
