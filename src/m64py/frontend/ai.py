@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import webbrowser
 from imp import reload
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QDialog
@@ -72,6 +73,15 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         elif errs > 0:
             self.status.setText("A component failed to load. Open the tab with [!] for details.")
 
+    @pyqtSlot()
+    def on_website_clicked(self):
+        """Open web browser to AlphaGriffin.com."""
+        url = 'http://alphagriffin.com'
+        log.info("Opening web browser", url=url)
+        try:
+            webbrowser.open(url)
+        except Exception:
+            log.fatal()
 
     @pyqtSlot()
     def on_prevTabButton_clicked(self):
