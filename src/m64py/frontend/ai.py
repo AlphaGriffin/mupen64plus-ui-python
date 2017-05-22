@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: lannocc @ AlphaGriffin <Alphagriffin.com>
+# Author: lannocc and ruckusist @ AlphaGriffin <Alphagriffin.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,12 +27,14 @@ class AIDashboard(QDialog, Ui_AIDashboard):
     """The Alpha Griffin Aritificial Intelligence Dashboard."""
 
     def __init__(self, parent, worker, settings):
-        """Alphagriffin Module Loader.
+        """Initialize the dashboard.
 
-        @param parent   QDialog (mainwindow)
-        @param worker   Mupen worker object
-        @param settings Settings dialog instance from mainwindow
+        Args:
+            parent (QDialog):       The window we belong to (usually mainwindow)
+            worker (Worker):        Frontend worker thread which manages ROM state
+            settings (Settings):    Instance of Settings dialog from mainwindow
         """
+
         log.info("Initializing Alpha Griffin Artificial Intelligence Dashboard")
         QDialog.__init__(self, parent)
         self.setupUi(self)
@@ -55,9 +57,8 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         self.nextTabButton.setEnabled(True)
         self.status.setText("Ready (loading deferred).")
 
-
     def show(self):
-        """show this window and attempt to load any tabs not already loaded"""
+        """Show this window and attempt to load any tabs not already loaded."""
         log.debug()
         super().show()
 

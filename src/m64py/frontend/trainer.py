@@ -22,7 +22,7 @@ from m64py.frontend.agblank import AGBlank
 import ag.logging as log
 
 pyVERSION = sys.version
-INTRO = """Tensorflow Model Creation and Training SOFTWARE.
+INTRO = """Model Creation and Training SOFTWARE using TensorFlow.
     Python Version: {}
     Step 1 - Choose a Dataset.
 
@@ -36,196 +36,8 @@ INTRO = """Tensorflow Model Creation and Training SOFTWARE.
 """.format(pyVERSION)
 
 
-class Worker(QThread):
-
-    def __init__(self, ui):
-        log.debug()
-        QThread.__init__(self, ui)
-        self.ui = ui
-        self.state = 0
-
-    '''
-    def setup(self, model_path, dataset, iters):
-
-        self.model_path = model_path
-        self.dataset = dataset
-        sess = tf.InteractiveSession()
-        checkpoint_file = tf.train.latest_checkpoint(model_path)
-        print(checkpoint_file)
-        new_saver = tf.train.import_meta_graph(checkpoint_file + ".meta")
-
-        sess.run(tf.global_variables_initializer())
-        new_saver.restore(self.sess, checkpoint_file)
-        global_step = tf.get_collection_ref('global_step')[0]
-
-        total_optimizations = sess.run(global_step)
-        print(total_optimizations)
-        self.iters = iters
-        # good
-        return total_optimizations
-
-    def run(self):
-        x = tf.get_collection('x_image')[0]
-        y = tf.get_collection('y')[0]
-        y_ = tf.get_collection('y_')[0]
-        keep_prob = tf.get_collection('keep_prob')[0]
-        loss = tf.get_collection('loss')[0]
-        train = tf.get_collection('train_op')[0]
-        learn = tf.get_collection('learn_rate')[0]
-        global_step = tf.get_collection_ref('global_step')[0]
-        writer = tf.summary.FileWriter(self.model_path)
-
-        # Training loop variables
-        batch_size = 50
-        iters = 5
-        for i in range(iters):
-            batch = data.next_batch(batch_size)
-            feed_dict = {x: batch[0],
-                         y_: batch[1],
-                         keep_prob: 0.8}
-            sess.run(train)
-            g = sess.run(global_step)
-
-            if i % int(iters/10) == 0:
-                saver.save(sess, self.model_path, global_step)
-                writer.add_summary(summary, int(g+i))
-
-    def tfStop(self):
-        self.session.close()
-    '''
-
-    def run(self):
-        log.debug()
-        try:
-            self.ui.status("Importing Python modules...")
-            import tensorflow as tf
-            import time
-            from m64py.tf.data_prep import DataPrep
-            from m64py.tf.build_network import MupenNetwork
-            self.ui.status("Ready for training.")
-
-            self.tf = tf
-            self.data_prep = DataPrep()
-            self.model_network = MupenNetwork()
-
-            while self.state >= 0:
-                time.sleep(0) # yield to other threads
-
-                if self.state == 1:
-                    self.select_data()
-                    self.state = 0
-
-                elif self.state == 2:
-                    self.build_new_network()
-                    self.state = 0
-
-                elif self.state == 3:
-                    self.train_network()
-                    self.state = 0
-
-        except Exception as e:
-            log.fatal()
-            self.ui.status("Error in Trainer Worker thread: {}".format(e))
-
-
-    def select_data(self):
-        """Select the data.
-
-        This has 3 steps
-        -----------------
-        * load numpy files and create a dataset
-        * load and prep model params
-        * create a new folder called work_dir/models/{game}/{game}model_{num}
-        * save the model
-        * combine dataset and model params and train dataset
-        * save again and confim
-        """
-        self.ui.status("Loading Dataset...")
-
-        files = self.ui.selection[0]
-        dataset = os.path.join(
-            self.ui.root_dir, "datasets", self.ui.currentGame, files)
-        self.ui.print_console("Selected {} as Training Data Path".format(dataset))
-        self.ui.print_console("Loading Dataset...")
-        self.active_dataset = self.data_prep.load_npz(dataset)
-        self.ui.actionButton.setEnabled(True)
-
-        self.ui.status("Dataset loaded.")
-        return True
-
-    def build_new_network(self):
-        self.ui.status("Building Network...")
-
-        #print(self.currentGame)
-        saveDir = os.path.join(self.ui.root_dir, "model", self.ui.currentGame)
-        self.ui.print_console("{}".format(saveDir))
-        model_fileName = "{}Model".format(self.ui.currentGame)
-        full_path = os.path.join(saveDir, model_fileName)
-        self.ui.print_console("{}".format(full_path))
-        try:
-            os.mkdir(full_path)
-        except Exception as e:
-            self.ui.print_console("{}".format(e))
-            try:
-                os.mkdir(saveDir)
-                os.mkdir(full_path)
-                pass
-            except Exception as e:
-                self.ui.print_console("{}".format(e))
-        self.ui.print_console("created a new directory {}".format(full_path))
-        self.model_network.save_network(full_path)
-        self.ui.print_console("this is working!")
-
-        self.ui.status("Network built.")
-
-    def train_network(self, iters=5):
-        self.ui.status("Training Network...")
-
-        tf = self.tf
-        saveDir = os.path.join(self.ui.root_dir, "model", self.ui.currentGame)
-        model_fileName = "{}Model".format(self.ui.currentGame)
-        model_path = os.path.join(saveDir, model_fileName)
-        self.ui.print_console("Loading Model From: {}".format(model_path))
-        sess = tf.InteractiveSession()
-        checkpoint_file = tf.train.latest_checkpoint(model_path)
-        print(checkpoint_file)
-        new_saver = tf.train.import_meta_graph(checkpoint_file + ".meta")
-        print("found metagraph")
-        sess.run(tf.global_variables_initializer())
-        print("init those variables")
-        new_saver.restore(sess, checkpoint_file)
-        self.ui.print_console("this is working!")
-        x = tf.get_collection('x_image')[0]
-        # y = tf.get_collection('y')[0]
-        y_ = tf.get_collection('y_')[0]
-        keep_prob = tf.get_collection('keep_prob')[0]
-        # loss = tf.get_collection('loss')[0]
-        train = tf.get_collection('train_op')[0]
-        # learn = tf.get_collection('learn_rate')[0]
-        global_step = tf.get_collection_ref('global_step')[0]
-        # writer = tf.summary.FileWriter(self.model_path)
-        self.ui.print_console("All variables loaded")
-
-        iters = 100
-        for i in range(iters):
-            batch = self.data_prep.next_batch(64)
-            self.ui.print_console("Got batch for iter {}".format(i+1))
-            feed_dict = {x: batch[0],
-                         y_: batch[1],
-                         keep_prob: 0.8}
-            sess.run(train, feed_dict=feed_dict)
-            g = sess.run(global_step)
-            self.ui.print_console("THIS IS WORKING!!! {}".format(g))
-            if i % int(iters/10):
-                new_saver.save(sess, model_path + '/Mupen64plus', global_step)
-            self.ui.print_console("this is SAVING!!!")
-        sess.close()
-
-        self.ui.status("Network trained.")
-
-
 class Trainer(AGBlank):
-    """AG_Trainer Widget of MuPen64 Python Ui."""
+    """Give the user some control over the AI training."""
 
     def __init__(self, parent, status, worker):
         """Init Stuff."""
@@ -245,12 +57,8 @@ class Trainer(AGBlank):
         self.selector.setEnabled(False)
 
         # get references
-        self.process = Worker(self)
+        self.process = Training(self)
         self.process.start()
-        '''
-        self.data_prep = DataPrep()
-        self.model_network = MupenNetwork()
-        '''
 
         # booleans
         self.processing = False
@@ -298,7 +106,7 @@ class Trainer(AGBlank):
         for x in self.selected:
             selection.append(x.text())
         select_string = ", ".join(x for x in selection)
-        self.input.setText("100")
+        self.input.setText("100")  # FIXME?
         self.selection = selection
 
         # if we have picked a game
@@ -335,14 +143,6 @@ class Trainer(AGBlank):
             for i in self.gamesList:
                 self.selector.addItem("{}".format(i))
 
-    def show(self):
-        """On Show this window."""
-        pass
-
-    def hide(self):
-        """On hide this window."""
-        pass
-
     @pyqtSlot()
     def on_actionButton_clicked(self):
         """Start Training the model."""
@@ -371,6 +171,3 @@ class Trainer(AGBlank):
             return
         self.actionButton.setEnabled(False)
 
-    @pyqtSlot()
-    def closeEvent(self, event=False):
-        pass
