@@ -136,7 +136,7 @@ class Recorder(AICommon):
                 pmap = self.worker.core.plugin_map[4][pinput]
             log.debug("detected input plugin", map=pmap)
             pname = pmap[3]
-            rname = 'Mupen64Plus SDL Input Plugin - AGE'
+            rname = 'Mupen64Plus SDL Input Plugin - A.G.E.'
             pver = pmap[4]
             rver = int('0x030000', 16)
             self.print_console("Input plugin detected: {} v{}".format(

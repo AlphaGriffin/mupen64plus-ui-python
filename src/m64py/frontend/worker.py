@@ -349,17 +349,17 @@ class Worker(QThread):
             (load, pause, action, cheats) = True, True, True, cheat
         self.parent.state_changed.emit((load, pause, action, cheats))
 
-    #def ai_stop(self):
-    #    """Stops AI record/play."""
-    #    self.core_state_set(M64CORE_AI_MODE, M64AI_NONE)
+    def ai_stop(self):
+        """Stops AI record/play."""
+        self.core_state_set(M64CORE_AI_MODE, M64AI_NONE)
 
-    #def ai_record(self):
-    #    """Stops AI record/play."""
-    #    self.core_state_set(M64CORE_AI_MODE, M64AI_RECORDING)
+    def ai_record(self):
+        """Stops AI record/play."""
+        self.core_state_set(M64CORE_AI_MODE, M64AI_RECORDING)
 
-    #def ai_play(self):
-    #    """Stops AI record/play."""
-    #    self.core_state_set(M64CORE_AI_MODE, M64AI_PLAYING)
+    def ai_play(self):
+        """Stops AI record/play."""
+        self.core_state_set(M64CORE_AI_MODE, M64AI_PLAYING)
 
     def stop(self):
         """Stops thread."""
