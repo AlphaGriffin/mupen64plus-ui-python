@@ -1,3 +1,6 @@
+=====
+m64py
+=====
 
                   _____ __ __
        ____ ___  / ___// // / ____  __  __
@@ -13,6 +16,12 @@
 
         Alpha Griffin Edition
         http://alphagriffin.com
+
+
+.. contents:: Table of Contents
+.. toctree::
+   API Documentation <api/modules>
+
 
 About
 -----
