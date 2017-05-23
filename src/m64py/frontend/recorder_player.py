@@ -22,7 +22,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import ag.logging as log
-from m64py.frontend.agblank import AGBlank
+from m64py.frontend.aicommon import AICommon
 from PyQt5.QtCore import pyqtSlot, QTimer, QThread
 
 VERSION = sys.version
@@ -91,7 +91,7 @@ class xpad(object):
         pass
 
 
-class Player(AGBlank):
+class Player(AICommon):
     """AG_Recorder Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker):
         log.debug("Recorder::__init__()")

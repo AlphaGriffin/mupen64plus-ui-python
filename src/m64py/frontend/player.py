@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from m64py.frontend.agblank import AGBlank
+from m64py.frontend.aicommon import AICommon
 from PyQt5.QtCore import pyqtSlot, QThread  # , QTimer
 from PyQt5.QtWidgets import QAbstractItemView
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -46,7 +46,7 @@ INTRO = \
 # USER INTERFACE
 #
 
-class Player(AGBlank):
+class Player(AICommon):
     """AG_Player Widget of MuPen64 Python Ui"""
 
     #

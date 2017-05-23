@@ -17,6 +17,7 @@
 import os
 import tensorflow as tf
 import time
+from m64py.utils import need_dir
 from m64py.tf.data_prep import DataPrep
 from m64py.tf.build_network import MupenNetwork
 import ag.logging as log
@@ -51,24 +52,15 @@ class Trainer():
         self.print("Loading Dataset...")
         self.active_dataset = self.data_prep.load_npz(dataset)
 
-    def dir(self, path):
-        self.print("{}".format(path))
-        if not os.path.exists(path):
-            os.mkdir(path)
-            self.print("created a new directory {}".format(path))
-        elif not os.path.isdir(path):
-            raise Exception("Path exists but is not a directory: {}".format(path))
-
-
     def build_new_network(self, saveDir, currentGame):
-        self.dir(saveDir)
+        need_dir(saveDir)
 
         saveDir = os.path.join(saveDir, currentGame)
-        self.dir(saveDir)
+        need_dir(saveDir)
 
         model_fileName = "{}Model".format(currentGame)
         full_path = os.path.join(saveDir, model_fileName)
-        self.dir(full_path)
+        need_dir(full_path)
 
         self.model_network.save_network(full_path)
         self.print("this is working!")
@@ -80,11 +72,11 @@ class Trainer():
         self.print("Loading Model From: {}".format(model_path))
         sess = tf.InteractiveSession()
         checkpoint_file = tf.train.latest_checkpoint(model_path)
-        print(checkpoint_file)
+        log.debug(checkpoint_file)
         new_saver = tf.train.import_meta_graph(checkpoint_file + ".meta")
-        print("found metagraph")
+        log.debug("found metagraph")
         sess.run(tf.global_variables_initializer())
-        print("init those variables")
+        log.debug("init those variables")
         new_saver.restore(sess, checkpoint_file)
         self.print("this is working!")
         x = tf.get_collection('x_image')[0]

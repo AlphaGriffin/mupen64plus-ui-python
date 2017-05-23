@@ -15,6 +15,7 @@
 
 import os
 import re
+import ag.logging as log
 
 
 def which(prog):
@@ -81,3 +82,15 @@ def format_options(param_help):
     if len(opts) > 0:
         return opts
     return None
+
+def need_dir(path):
+    """Ensure the supplied path is a directory; make it if necessary."""
+    log.debug("need a directory", path=path)
+
+    if not os.path.exists(path):
+        os.mkdir(path)
+        log.info("created a new directory", path=path)
+    elif not os.path.isdir(path):
+        log.error("not a directory", path=path)
+        raise Exception("Path exists but is not a directory: {}".format(path))
+

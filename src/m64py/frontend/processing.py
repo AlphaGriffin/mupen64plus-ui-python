@@ -18,7 +18,7 @@ import os
 import sys
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
-from m64py.frontend.agblank import AGBlank
+from m64py.frontend.aicommon import AICommon
 import ag.logging as log
 
 VERSION = sys.version
@@ -34,7 +34,7 @@ Note: Make BW has been disabled. This has been left TODO.
 """.format(VERSION,)
 
 
-class Processing(AGBlank):
+class Processing(AICommon):
     """AG_Trainer Widget of MuPen64 Python Ui."""
 
     def __init__(self, parent, status, worker, backend):

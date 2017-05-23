@@ -47,7 +47,7 @@ help:
 	@echo "  man            to make manual pages"
 
 
-all:	qtpy python docs
+all:	qtpy python #docs
 
 clean:	docs_clean python_clean
 

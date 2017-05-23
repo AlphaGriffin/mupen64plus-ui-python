@@ -18,7 +18,7 @@ import os
 import sys
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
-from m64py.frontend.agblank import AGBlank
+from m64py.frontend.aicommon import AICommon
 import ag.logging as log
 
 pyVERSION = sys.version
@@ -36,7 +36,7 @@ INTRO = """Model Creation and Training SOFTWARE using TensorFlow.
 """.format(pyVERSION)
 
 
-class Trainer(AGBlank):
+class Trainer(AICommon):
     """Give the user some control over the AI training."""
 
     def __init__(self, parent, status, worker, backend):

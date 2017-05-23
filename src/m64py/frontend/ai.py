@@ -81,7 +81,6 @@ class Deferred():
             return True
 
         self.loaded = False
-        self.dashboard.status.setText("Loading the " + self.tabname + " interface...")
 
         try:
             log.debug("attempting to load frontend")
@@ -98,7 +97,6 @@ class Deferred():
                 self.tabindex = self.dashboard.tabster.addTab(
                         self.frontend, self.tabname)
 
-            self.dashboard.status.setText("The " + self.tabname + " interface is ready.")
             self.loaded = True
             return True
 
@@ -172,6 +170,9 @@ class AIDashboard(QDialog, Ui_AIDashboard):
     def on_backendReady(self, component, force):
         log.debug("Backend is ready", component=component)
         component.handleFrontend(force)
+        
+        if self.backends.isFinished():
+            self.status.setText("Ready.")
 
     @pyqtSlot()
     def on_website_clicked(self):
@@ -234,13 +235,15 @@ class Recorder(Deferred):
         Deferred.__init__(self, dashboard, "Recorder")
 
     def loadBackend(self, force):
-        return None
+        import m64py.ai.recorder as backend
+        if force: reload(backend)
+        return backend.Recorder()
 
     def loadFrontend(self, force):
         import m64py.frontend.recorder as frontend
         if force: reload(frontend)
         dash = self.dashboard
-        return frontend.Recorder(dash, dash.status, dash.worker)
+        return frontend.Recorder(dash, dash.status, dash.worker, self.backend)
 
 
 class Processing(Deferred):

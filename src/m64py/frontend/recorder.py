@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: Ruckusist @ AlphaGriffin <Alphagriffin.com>
+# Author: Ruckusist and lannocc @ AlphaGriffin <Alphagriffin.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,9 @@
 import os
 import sys
 import time
-import shutil
-from PyQt5.QtCore import pyqtSlot
-from m64py.frontend.agblank import AGBlank
-from m64py.utils import version_split
+from PyQt5.QtCore import pyqtSlot, QThread
+from m64py.frontend.aicommon import AICommon
+from m64py.utils import need_dir, version_split
 import ag.logging as log
 
 VERSION = sys.version
@@ -41,17 +40,15 @@ INTRO =\
     """.format(VERSION)
 
 
-class Recorder(AGBlank):
+class Recorder(AICommon):
     """AG_Recorder Widget of MuPen64 Python Ui."""
 
-    def __init__(self, parent, status, worker):
-        """Set global references."""
-        log.debug()
-        # init
+    def __init__(self, parent, status, worker, backend):
+        """Initialize the interface."""
         super().__init__(parent, status)
-        self.setWorker(worker)   # get this from MUPEN core
+        self.setWorker(worker, "training")
 
-        # set up the blanks
+        # set up the widgets
         self.setWindowTitle('AG Recorder')
         self.selectorLabel.setText('Existing Save Folders:')
         self.inputLabel.setText('Save to:')
@@ -64,10 +61,7 @@ class Recorder(AGBlank):
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
 
-        # timer state
-        self.runningTimer = False
-
-        # booleans are good
+        # recording status
         self.recording = False       # are we recording?
         self.recordStartedAt = None  # when did the recording start?
         self.game_on = False         # is there a game runnning?
@@ -78,6 +72,10 @@ class Recorder(AGBlank):
         self.check_game_name = ""
         self.save_name = ""
 
+        # backend and corresponding thread
+        self.backend = backend
+        self.thread = RecorderThread(self, self.backend)
+
         # startup
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
@@ -85,23 +83,19 @@ class Recorder(AGBlank):
     def set_save_dir(self):
         """Set the input field text."""
         name = self.getGame()
-        name_path = os.path.join(self.work_dir, "training", name)
-        if not os.path.isdir(name_path):
-            log.debug("path does not exist, creating it now: {}".format(name_path))
-            os.makedirs(name_path)
-        self.print_console("Good Choice with {}, Good luck!".format(name))
+        name_path = os.path.join(self.work_dir, name)
+        need_dir(name_path)
 
+        self.print_console("Good Choice with {}, Good luck!".format(name))
         self.build_selector(name_path)
 
         folder_len = len(os.listdir(name_path))
         path = "newGame_{}".format(folder_len)
-        msg = "Ready to Save in Directory:"
-        self.print_console("{}\n{}".format(
-            msg, os.path.join(name_path, path)
-            ))
+
         self.input.setText(os.path.join(
             name_path, path
             ))
+
         self.actionButton.setEnabled(True)
 
     def build_selector(self, folder):
@@ -174,11 +168,19 @@ class Recorder(AGBlank):
         self.status("Recording...")
         self.print_console("Starting Recording")
         self.actionButton.setText('Stop')
+
         self.save_name = self.input.text()
+        need_dir(self.save_name)
 
-        if not os.path.isdir(self.save_name):
-            os.makedirs(self.save_name)
+        msg = "Ready to Save in Directory: {}".format(self.save_name)
+        self.print_console(msg)
 
+        if self.thread.isRunning():
+            log.warn("not ready yet")
+            return
+
+        self.backend.root_dir = self.root_dir
+        self.backend.save_name = self.save_name
         self.worker.toggle_autoshots()
         self.recording = True
         self.recordStartedAt = time.time()*1000.0
@@ -200,79 +202,8 @@ class Recorder(AGBlank):
 
             self.set_save_dir()
             self.recording = False
-            self.get_controllers()
-            self.get_images()
 
-    def get_controllers(self):
-        """Move all the controller input logs.
-
-        To the current save_dir.
-        """
-        log.debug()
-        input_dir = os.path.join(self.work_dir, "input/")
-        log.debug("about to list dir: {}".format(input_dir))
-        x = os.listdir(input_dir)
-        log.debug("got stuff: {}".format(x))
-        if len(x) > 0:
-            y = []
-            for i in x:
-                y.append(i)
-                # log.debug(input_dir+i)
-                mv_from = os.path.join(input_dir, i)
-                mv_to = self.save_name
-                log.debug("moving: {} -> {}".format(
-                    mv_from, mv_to
-                    ))
-                shutil.move(mv_from, mv_to)
-
-            self.print_console(
-                "Got {} input logs, moved to {}".format(
-                    len(y), self.save_name
-                    ))
-
-        else:
-            self.checkButton.setEnabled(True)
-            self.print_console("No Inputs Saved")
-
-    def get_images(self):
-        """Move all the screenshots to the current save_dir."""
-        log.debug()
-        shot_dir = os.path.join(self.work_dir,
-                                "screenshot/")
-        log.debug("about to list dir: {}".format(shot_dir))
-        x = os.listdir(shot_dir)
-        log.debug("got stuff: {}".format(x))
-        if len(x) > 0:
-            y = []
-            for i in x:
-                y.append(i)
-                # log.debug(shot_dir+i)
-                mv_from = os.path.join(shot_dir, i)
-                mv_to = self.save_name
-                log.debug("moving: {} -> {}".format(
-                    mv_from, mv_to
-                    ))
-                shutil.move(mv_from, mv_to)
-
-            self.print_console(
-                "Got {} images, moved to {}".format(
-                    len(y),
-                    self.save_name
-                    ))
-        else:
-            self.checkButton.setEnabled(True)
-            self.print_console("No ScreenShots Saved")
-
-    def show(self):
-        """Default show command."""
-        # self.startupTimer()
-        pass
-
-    def hide(self):
-        """Stop recording on game close."""
-        # self.shutdownTimer()
-        self.stop()
-        super().hide()
+            self.thread.start()
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
@@ -295,5 +226,22 @@ class Recorder(AGBlank):
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self): pass
 
-    @pyqtSlot()
-    def closeEvent(self, event=False): pass
+
+class RecorderThread(QThread):
+    def __init__(self, ui, backend):
+        QThread.__init__(self, ui)
+        self.ui = ui
+        self.backend = backend
+
+    def run(self):
+        self.ui.status("Finalizing Recording...")
+
+        try:
+            self.backend.get_controllers()
+            self.backend.get_images()
+            self.ui.status("Recording finished.")
+
+        except Exception as e:
+            log.error()
+            self.ui.status("Error while finishing recording: {}".format(e))
+

@@ -18,7 +18,7 @@ import os
 import sys
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-from m64py.frontend.agblank import AGBlank
+from m64py.frontend.aicommon import AICommon
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 # from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler
@@ -111,7 +111,7 @@ class Sock_Server(object):
         soc.close()  # dont worry about it.
 
 
-class Player(AGBlank):
+class Player(AICommon):
     """AG_Trainer Widget of MuPen64 Python Ui"""
     def __init__(self, parent, worker, settings):
         super().__init__(parent)
