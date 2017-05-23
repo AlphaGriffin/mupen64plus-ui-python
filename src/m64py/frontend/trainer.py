@@ -16,10 +16,9 @@
 
 import os
 import sys
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QAbstractItemView
 from m64py.frontend.agblank import AGBlank
-from m64py.ai.trainer import Training
 import ag.logging as log
 
 pyVERSION = sys.version
@@ -40,7 +39,7 @@ INTRO = """Model Creation and Training SOFTWARE using TensorFlow.
 class Trainer(AGBlank):
     """Give the user some control over the AI training."""
 
-    def __init__(self, parent, status, worker):
+    def __init__(self, parent, status, worker, backend):
         """Init Stuff."""
         super().__init__(parent, status)
         self.parent = parent
@@ -57,11 +56,9 @@ class Trainer(AGBlank):
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
 
-        # get references
-        self.process = Training(self)
-        self.process.start()
+        self.backend = backend
+        self.thread = None
 
-        # booleans
         self.processing = False
         self.print_console("AlphaGriffin.com")
         self.print_console(INTRO)
@@ -73,7 +70,6 @@ class Trainer(AGBlank):
         self.selectingRom = True
         self.currentGame = None
 
-        # Use the processor
         self.worker = worker
         self.root_dir = self.worker.core.config.get_path("UserData")
         self.work_dir = os.path.join(self.root_dir, "datasets")
@@ -149,19 +145,31 @@ class Trainer(AGBlank):
         """Start Training the model."""
         # iters = self.input.text()
         self.print_console("actionButton pressed!")
-        self.process.state = 3
+        if self.thread is None or self.thread.isFinished():
+            self.thread = TrainerTrain(self, self.backend)
+            self.thread.start()
+        else:
+            self.print_console("not ready yet!")
 
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts."""
         self.print_console("checkButton pressed!")
-        self.process.state = 1
+        if self.thread is None or self.thread.isFinished():
+            self.thread = TrainerSelect(self, self.backend, self.selection[0])
+            self.thread.start()
+        else:
+            self.print_console("not ready yet!")
 
     @pyqtSlot()
     def on_check2Button_clicked(self):
         """Test Button for pressing broken parts."""
         self.print_console("check2Button pressed!")
-        self.process.state = 2
+        if self.thread is None or self.thread.isFinished():
+            self.thread = TrainerBuild(self, self.backend)
+            self.thread.start()
+        else:
+            self.print_console("not ready yet!")
 
     @pyqtSlot()
     def on_selector_itemSelectionChanged(self):
@@ -171,4 +179,61 @@ class Trainer(AGBlank):
             self.selecterator()
             return
         self.actionButton.setEnabled(False)
+
+
+class TrainerSelect(QThread):
+    def __init__(self, ui, backend, files):
+        QThread.__init__(self, ui)
+        self.ui = ui
+        self.backend = backend
+        self.files = files
+
+    def run(self):
+        self.ui.status("Loading Dataset...")
+
+        try:
+            self.backend.select_data(self.ui.load_dir, self.files)
+            self.ui.actionButton.setEnabled(True)
+            self.ui.status("Dataset loaded.")
+
+        except Exception as e:
+            log.error()
+            self.ui.status("Error loading dataset: {}".format(e))
+
+
+class TrainerBuild(QThread):
+    def __init__(self, ui, backend):
+        QThread.__init__(self, ui)
+        self.ui = ui
+        self.backend = backend
+
+    def run(self):
+        self.ui.status("Building Model...")
+
+        try:
+            self.backend.build_new_network(self.ui.save_dir,
+                    self.ui.currentGame)
+            self.ui.status("Model built.")
+
+        except Exception as e:
+            log.error()
+            self.ui.status("Error building model: {}".format(e))
+
+
+class TrainerTrain(QThread):
+    def __init__(self, ui, backend):
+        QThread.__init__(self, ui)
+        self.ui = ui
+        self.backend = backend
+
+    def run(self):
+        self.ui.status("Training Network...")
+
+        try:
+            self.backend.train_network(self.ui.save_dir, self.ui.currentGame)
+            self.ui.status("Network trained.")
+
+        except Exception as e:
+            log.error()
+            self.ui.status("Error training network: {}".format(e))
 
