@@ -20,6 +20,7 @@ import time
 import shutil
 from PyQt5.QtCore import pyqtSlot
 from m64py.frontend.agblank import AGBlank
+from m64py.utils import version_split
 import ag.logging as log
 
 VERSION = sys.version
@@ -124,23 +125,48 @@ class Recorder(AGBlank):
         return "no_game"
 
     def check_game(self):
-        """Check mupen worker and see if hes working.
-
-        called by runningTimer.
-        """
+        """Check requirements are satisfied to record."""
+        self.print_console("Checking Record Readiness.")
         wasloaded = self.game_on
+
         self.worker.core_state_query(1)
         loaded = self.worker.state in [2, 3]
-        self.game_on = loaded
 
-        if not loaded:
+        ready = False
+        if loaded:
+            plugins = self.worker.get_plugins()
+            pinput = plugins.get(4)
+            if not pinput:
+                pmap = list(self.worker.core.plugin_map[4].values())[0]
+            else:
+                pmap = self.worker.core.plugin_map[4][pinput]
+            log.debug("detected input plugin", map=pmap)
+            pname = pmap[3]
+            rname = 'Mupen64Plus SDL Input Plugin - AGE'
+            pver = pmap[4]
+            rver = 132352
+            self.print_console("Input plugin detected: {} v{}".format(
+                    pname, version_split(pver)))
+            if pname == rname and pver >= rver:
+                ready = True
+            else:
+                self.print_console("SORRY...input plugin mismatch")
+                self.print_console("   required: {} >= v{}".format(
+                    rname, version_split(rver)))
+                log.error("Wrong input plugin", name=pname,
+                        version=version_split(pver), required_name=rname,
+                        required_version=version_split(rver))
+
+        self.game_on = loaded and ready
+
+        if self.game_on:
             if wasloaded:
                 self.actionButton.setEnabled(False)
             if self.recording:
                 self.stop()
 
         if not wasloaded:
-            if loaded:
+            if self.game_on:
                 self.set_save_dir()
 
     def record(self):
@@ -260,8 +286,6 @@ class Recorder(AGBlank):
     def on_checkButton_clicked(self):
         """check constitution of system."""
         self.check_game()
-        self.print_console("Checking Record Readiness.")
-        pass
 
     @pyqtSlot()
     def on_check2Button_clicked(self):
