@@ -6,3 +6,10 @@
 .idea
 /dist/*
 m64py.py
+
+/doc/doctrees
+/doc/man
+/doc/html
+/doc/text
+/doc/coverage
+

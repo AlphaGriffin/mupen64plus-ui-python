@@ -15,10 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
-from PyQt5.QtCore import pyqtSlot, QThread
-from PyQt5.QtWidgets import QAbstractItemView
-from m64py.frontend.agblank import AGBlank
+from PyQt5.QtCore import QThread
 import ag.logging as log
 
 

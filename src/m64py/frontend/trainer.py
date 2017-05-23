@@ -16,9 +16,10 @@
 
 import os
 import sys
-from PyQt5.QtCore import pyqtSlot, QThread
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QAbstractItemView
 from m64py.frontend.agblank import AGBlank
+from m64py.ai.trainer import Training
 import ag.logging as log
 
 pyVERSION = sys.version
