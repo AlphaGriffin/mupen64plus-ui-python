@@ -138,7 +138,7 @@ class Recorder(AICommon):
             pname = pmap[3]
             rname = 'Mupen64Plus SDL Input Plugin - AGE'
             pver = pmap[4]
-            rver = 132352
+            rver = int('0x030000', 16)
             self.print_console("Input plugin detected: {} v{}".format(
                     pname, version_split(pver)))
             if pname == rname and pver >= rver:

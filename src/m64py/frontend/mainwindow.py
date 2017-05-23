@@ -34,8 +34,6 @@ from m64py.frontend.settings import Settings
 from m64py.frontend.glwidget import GLWidget
 from m64py.ui.mainwindow_ui import Ui_MainWindow
 from m64py.frontend.recentfiles import RecentFiles
-
-#from m64py.frontend.plotter import Plotter
 from m64py.frontend.ai import AIDashboard
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -90,7 +88,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             raise Exception("Core/worker init failure. See other messages for details.")
         
         # Alpha Griffin Edition additions...
-#        self.plotter = Plotter(self)
         self.ai = AIDashboard(self, self.worker, self.settings)
 
     def closeEvent(self, event):
@@ -489,11 +486,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Shows log dialog."""
         logview.show()
     
-    @pyqtSlot()
-    def on_actionPad_Graph_triggered(self):
-        """Shows plotter dialog."""
-        self.plotter.show()
-        
+       
     @pyqtSlot()
     def on_actionAIDashboard_triggered(self):
         """Shows Artificial Intelligence Dashboard dialog."""

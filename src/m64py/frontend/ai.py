@@ -19,6 +19,7 @@ import traceback
 from imp import reload
 from PyQt5.QtCore import pyqtSlot, QThread, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QDialog
+from m64py.utils import version_split
 from m64py.ui.ai_ui import Ui_AIDashboard
 from m64py.frontend.agerror import AGError
 import ag.logging as log
@@ -139,7 +140,6 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
-        self.status.setText("Loading the interface...")
         self.parent = parent
         self.worker = worker
         self.settings = settings
@@ -147,9 +147,27 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         if log.level >= log.DEBUG:
             self.tabster.setTabsClosable(True)
 
-        self.loading = QWidget(self)
+        # check for required core version
+        self.valid = False
+        version = self.worker.core.plugin_get_version(self.worker.core.m64p,
+                self.worker.core.core_path)
+        if version:
+            version = version[1]
+            required = int('0x030000', 16)
+
+            if version >= required:
+                self.valid = True
+
+        if not self.valid:
+            log.error("Bad core version", found=version_split(version),
+                    required=version_split(required))
+            self.status.setText(
+                    "Core version {} or higher required.".format(
+                        version_split(required)))
+            return
 
         # set up all the functional tabs for deferred load
+        self.status.setText("Preparing the interface...")
         self.recorder = Recorder(self)
         self.processing = Processing(self)
         self.tester = Training(self)
@@ -164,7 +182,8 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         """Show this window and attempt to load any tabs not already loaded."""
         log.debug()
         super().show()
-        self.backends.start()
+        if self.valid:
+            self.backends.start()
 
     @pyqtSlot(Deferred, bool)
     def on_backendReady(self, component, force):
@@ -202,6 +221,9 @@ class AIDashboard(QDialog, Ui_AIDashboard):
 
     @pyqtSlot(int)
     def on_tabster_tabCloseRequested(self, index):
+        if not self.valid:
+            return
+
         if self.backends.isFinished():
             self.backends.tabindex = index
             self.backends.start()

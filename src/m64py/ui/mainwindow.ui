@@ -84,6 +84,8 @@
     <addaction name="menuLoad"/>
     <addaction name="menuRecent"/>
     <addaction name="separator"/>
+    <addaction name="actionAIDashboard"/>
+    <addaction name="separator"/>
     <addaction name="actionLoadState"/>
     <addaction name="actionSaveState"/>
     <addaction name="menuStateSlot"/>
@@ -92,8 +94,6 @@
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
     <addaction name="actionSaveScreenshot"/>
-    <addaction name="actionAIDashboard"/>
-    <addaction name="actionPad_Graph"/>
     <addaction name="separator"/>
     <addaction name="actionShowROMInfo"/>
     <addaction name="separator"/>
@@ -654,43 +654,9 @@ QStatusBar { margin:0px; }</string>
     <string>&amp;Log Viewer</string>
    </property>
   </action>
-  <action name="actionPad_Graph">
-   <property name="text">
-    <string>&amp;Joystick Input Graph</string>
-   </property>
-  </action>
-  <action name="actionRecording_Console">
-   <property name="text">
-    <string>&amp;Recording Console</string>
-   </property>
-  </action>
-  <action name="actionAGAbout">
-   <property name="icon">
-    <iconset resource="icons.qrc">
-     <normaloff>:/icons/action_about.png</normaloff>:/icons/action_about.png</iconset>
-   </property>
-   <property name="text">
-    <string>About Alpha Griffin Edition</string>
-   </property>
-  </action>
-  <action name="actionTraining_Console">
-   <property name="text">
-    <string>&amp;Training Console</string>
-   </property>
-  </action>
-  <action name="actionProcessing_Console">
-   <property name="text">
-    <string>Processing Console</string>
-   </property>
-  </action>
-  <action name="actionPlayer_Console">
-   <property name="text">
-    <string>Player Console</string>
-   </property>
-  </action>
   <action name="actionAIDashboard">
    <property name="text">
-    <string>(&amp;AI,UI)+</string>
+    <string>&amp;Artificial Intelligence</string>
    </property>
    <property name="iconText">
     <string>AI+UI</string>
