@@ -181,7 +181,7 @@ class Recorder(AICommon):
 
         self.backend.root_dir = self.root_dir
         self.backend.save_name = self.save_name
-        self.worker.toggle_autoshots()
+        self.worker.ai_record()
         self.recording = True
         self.recordStartedAt = time.time()*1000.0
 
@@ -193,7 +193,7 @@ class Recorder(AICommon):
         if self.recording:
             self.status("Done recording.")
             # self.poll_time.stop()
-            self.worker.toggle_autoshots()
+            self.worker.ai_stop()
             self.actionButton.setText('Record')
 
             elapsed = time.time()*1000.0 - self.recordStartedAt

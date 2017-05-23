@@ -403,8 +403,8 @@ class PlayerThread(QThread):
         # self.parent.print_console("Starting local HTTP server for AI input pass-through")
         # self.start_server()
         # FIXME: remove any files from screenshot folder automatically before we start?
-        self.parent.print_console("Turning on autoshots")
-        self.parent.worker.toggle_autoshots()
+        self.parent.print_console("Turning on core AI player mode")
+        self.parent.worker.ai_play()
 
         # set...
         self.parent.print_console("All set!")
@@ -427,7 +427,7 @@ class PlayerThread(QThread):
 
         # peace out
         log.debug("player thread cleaning up...")
-        self.parent.worker.toggle_autoshots()
+        self.parent.worker.ai_stop()
         self.stop_server()
         self.thinker.forget()
 

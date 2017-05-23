@@ -30,6 +30,7 @@ from m64py.core.vidext import video
 from m64py.archive import Archive
 from m64py.platform import DLL_EXT, DEFAULT_DYNLIB, SEARCH_DIRS
 
+import ag.logging as log
 
 class Worker(QThread):
     """Mupen64Plus thread worker"""
@@ -347,13 +348,18 @@ class Worker(QThread):
         elif self.state == M64EMU_RUNNING:
             (load, pause, action, cheats) = True, True, True, cheat
         self.parent.state_changed.emit((load, pause, action, cheats))
-        
-    def toggle_autoshots(self):
-        """Toggles auto-screenshot function."""
-        if self.core_state_query(M64CORE_VIDEO_AUTOSHOTS):
-            self.core_state_set(M64CORE_VIDEO_AUTOSHOTS, 0)
-        else:
-            self.core_state_set(M64CORE_VIDEO_AUTOSHOTS, 1)
+
+    #def ai_stop(self):
+    #    """Stops AI record/play."""
+    #    self.core_state_set(M64CORE_AI_MODE, M64AI_NONE)
+
+    #def ai_record(self):
+    #    """Stops AI record/play."""
+    #    self.core_state_set(M64CORE_AI_MODE, M64AI_RECORDING)
+
+    #def ai_play(self):
+    #    """Stops AI record/play."""
+    #    self.core_state_set(M64CORE_AI_MODE, M64AI_PLAYING)
 
     def stop(self):
         """Stops thread."""
@@ -362,10 +368,14 @@ class Worker(QThread):
 
     def run(self):
         """Starts thread."""
-        self.rom_open()
-        self.core.attach_plugins(
-            self.get_plugins())
-        self.core.execute()
-        self.core.detach_plugins()
-        self.rom_close()
-        self.toggle_actions()
+        try:
+            self.rom_open()
+            self.core.attach_plugins(
+                self.get_plugins())
+            self.core.execute()
+            self.core.detach_plugins()
+            self.rom_close()
+            self.toggle_actions()
+        except Exception:
+            log.fatal()
+

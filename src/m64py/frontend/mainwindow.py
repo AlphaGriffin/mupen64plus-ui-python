@@ -406,11 +406,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.worker.toggle_mute()
 
     @pyqtSlot()
-    def on_actionAutoShots_triggered(self):
-        """Toggles auto-shots."""
-        self.worker.toggle_autoshots()
-
-    @pyqtSlot()
     def on_actionStop_triggered(self):
         """Stops emulator."""
         self.worker.stop()

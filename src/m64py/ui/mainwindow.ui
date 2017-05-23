@@ -128,7 +128,6 @@
     </property>
     <addaction name="actionPause"/>
     <addaction name="actionMute"/>
-    <addaction name="actionAutoShots"/>
     <addaction name="separator"/>
     <addaction name="actionStop"/>
     <addaction name="actionReset"/>
@@ -516,20 +515,6 @@ QStatusBar { margin:0px; }</string>
    </property>
    <property name="shortcut">
     <string>M</string>
-   </property>
-  </action>
-  <action name="actionAutoShots">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Auto-Shots</string>
-   </property>
-   <property name="shortcut">
-    <string>A</string>
    </property>
   </action>
   <action name="actionSlowDown">
