@@ -237,8 +237,11 @@ class RecorderThread(QThread):
         self.ui.status("Finalizing Recording...")
 
         try:
-            self.backend.get_controllers()
+            # first wait a second for file buffers to close (FIXME?)
+            time.sleep(1)
+
             self.backend.get_images()
+            self.backend.get_controllers()
             self.ui.status("Recording finished.")
 
         except Exception as e:
