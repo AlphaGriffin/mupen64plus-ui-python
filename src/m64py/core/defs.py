@@ -215,6 +215,36 @@ class m64p_2d_size(C.Structure):
         ('uiHeight', C.c_uint)
     ]
 
+class Buttons_fields(C.LittleEndianStructure):
+    _fields_ = [
+            ("R_DPAD",          C.c_uint8, 1),
+            ("L_DPAD",          C.c_uint8, 1),
+            ("D_DPAD",          C.c_uint8, 1),
+            ("U_DPAD",          C.c_uint8, 1),
+            ("START_BUTTON",    C.c_uint8, 1),
+            ("Z_TRIG",          C.c_uint8, 1),
+            ("B_BUTTON",        C.c_uint8, 1),
+            ("A_BUTTON",        C.c_uint8, 1),
+
+            ("R_CBUTTON",       C.c_uint8, 1),
+            ("L_CBUTTON",       C.c_uint8, 1),
+            ("D_CBUTTON",       C.c_uint8, 1),
+            ("U_CBUTTON",       C.c_uint8, 1),
+            ("R_TRIG",          C.c_uint8, 1),
+            ("L_TRIG",          C.c_uint8, 1),
+            ("Reserved1",       C.c_uint8, 1),
+            ("Reserved2",       C.c_uint8, 1),
+
+            ("X_AXIS",          C.c_int8, 8),
+            ("Y_AXIS",          C.c_int8, 8),
+        ]
+
+class Buttons(C.Union):
+    _fields_ = [
+            ("bits",    Buttons_fields),
+            ("value",   C.c_uint32)
+        ]
+
 FuncInit = C.CFUNCTYPE(m64p_error)
 FuncQuit = C.CFUNCTYPE(m64p_error)
 FuncListModes = C.CFUNCTYPE(m64p_error, C.POINTER(m64p_2d_size), C.POINTER(C.c_int))

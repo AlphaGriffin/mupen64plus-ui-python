@@ -42,7 +42,6 @@ class Recorder():
                 "Got {} input logs, moved to {}".format(
                     count, self.save_name))
         else:
-            self.checkButton.setEnabled(True)
             self.print("No Inputs Saved")
 
     def get_images(self):
@@ -55,7 +54,6 @@ class Recorder():
                 "Got {} images, moved to {}".format(
                     count, self.save_name))
         else:
-            self.checkButton.setEnabled(True)
             self.print("No ScreenShots Saved")
 
     def move_all_files(self, from_dir):
@@ -69,11 +67,5 @@ class Recorder():
                 log.debug("moving", file=mv_from, to=mv_to)
                 shutil.move(mv_from, mv_to)
 
-            return len(files)
-
-        else:
-            self.checkButton.setEnabled(True)
-            self.print("No ScreenShots Saved")
-
-
+        return len(files)
 

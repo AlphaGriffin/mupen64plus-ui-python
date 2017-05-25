@@ -170,7 +170,8 @@ class AIDashboard(QDialog, Ui_AIDashboard):
         self.status.setText("Preparing the interface...")
         self.recorder = Recorder(self)
         self.processing = Processing(self)
-        self.tester = Training(self)
+        self.training = Training(self)
+        self.player = Player(self)
 
         self.backends = BackendLoader(self)
         self.backendReady.connect(self.on_backendReady)
@@ -243,7 +244,8 @@ class BackendLoader(QThread):
         
         if not dash.recorder.handleBackend(self.tabindex): errs += 1
         if not dash.processing.handleBackend(self.tabindex): errs += 1
-        if not dash.tester.handleBackend(self.tabindex): errs += 1
+        if not dash.training.handleBackend(self.tabindex): errs += 1
+        if not dash.player.handleBackend(self.tabindex): errs += 1
 
         if errs > 1:
             dash.status.setText("{} components failed to load. Open the tabs with [!] for details.".format(errs))
@@ -254,7 +256,7 @@ class BackendLoader(QThread):
 class Recorder(Deferred):
     def __init__(self, dashboard):
         log.debug()
-        Deferred.__init__(self, dashboard, "Recorder")
+        Deferred.__init__(self, dashboard, "Record")
 
     def loadBackend(self, force):
         import m64py.ai.recorder as backend
@@ -271,7 +273,7 @@ class Recorder(Deferred):
 class Processing(Deferred):
     def __init__(self, dashboard):
         log.debug()
-        Deferred.__init__(self, dashboard, "Processing")
+        Deferred.__init__(self, dashboard, "Process")
 
     def loadBackend(self, force):
         import m64py.ai.processing as backend
@@ -288,7 +290,7 @@ class Processing(Deferred):
 class Training(Deferred):
     def __init__(self, dashboard):
         log.debug()
-        Deferred.__init__(self, dashboard, "Training")
+        Deferred.__init__(self, dashboard, "Train")
 
     def loadBackend(self, force):
         import m64py.ai.trainer as backend
@@ -300,4 +302,19 @@ class Training(Deferred):
         if force: reload(frontend)
         dash = self.dashboard
         return frontend.Trainer(dash, dash.status, dash.worker, self.backend)
+
+
+class Player(Deferred):
+    def __init__(self, dashboard):
+        log.debug()
+        Deferred.__init__(self, dashboard, "Play")
+
+    def loadBackend(self, force):
+        return None
+
+    def loadFrontend(self, force):
+        import m64py.frontend.player as frontend
+        if force: reload(frontend)
+        dash = self.dashboard
+        return frontend.Player(dash, dash.worker, dash.settings)
 

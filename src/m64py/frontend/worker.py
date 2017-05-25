@@ -226,7 +226,6 @@ class Worker(QThread):
 
     def save_image(self, title=True):
         """Saves snapshot or title image."""
-        print("FUCK THIS SHIT")
         data_path = self.core.config.get_path("UserData")
         capture = "title" if title else "snapshot"
         dst_path = os.path.join(data_path, capture)

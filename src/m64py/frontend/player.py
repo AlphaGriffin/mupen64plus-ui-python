@@ -18,13 +18,14 @@ from m64py.frontend.aicommon import AICommon
 from PyQt5.QtCore import pyqtSlot, QThread  # , QTimer
 from PyQt5.QtWidgets import QAbstractItemView
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import os, sys, time  # , shutil
+import os, sys, socket, time  # , shutil
 # from glob import glob as check
 import numpy as np
 import tensorflow as tf
 from PIL import Image
 from PIL import ImageFile
 import traceback
+from m64py.core.defs import Buttons
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
 
@@ -86,8 +87,8 @@ class Player(AICommon):
         self.checkButton.setEnabled(False)
 
         # check2 button starts server
-        self.check2Button.setText('Thing 2')
-        self.check2Button.setEnabled(False)
+        self.check2Button.setText('Auto-Control Test')
+        self.check2Button.setEnabled(True)
 
         # status flags
         self.playing = False
@@ -109,6 +110,12 @@ class Player(AICommon):
         self.print_console(INTRO)
         self.getSaves()
 
+        # FIXME testing
+        data = Buttons()
+        data.bits.START_BUTTON = 1
+        print(data.value)
+        print(hex(data.value))
+        self.data = data
 
     # INPUT FUNCTIONS
     def prepareInputPlugin(self, load):  # FIXME NOT DONE
@@ -315,6 +322,25 @@ class Player(AICommon):
         """
 
     @pyqtSlot()
+    def on_check2Button_clicked(self):
+        log.debug()
+        self.worker.core_state_query(1)
+        loaded = self.worker.state in [2, 3]
+
+        if not loaded:
+            self.print_console("Sorry, a ROM must be running first.")
+            return
+
+        try:
+            self.worker.ai_play()
+
+            thread = PlayerTest(self, self.data)
+            thread.start()
+
+        except Exception:
+            log.error()
+
+    @pyqtSlot()
     def on_actionButton_clicked(self):
         """Process the files"""
         try:
@@ -361,6 +387,32 @@ class Player(AICommon):
     def show(self):
         """Show this window"""
         super().show()
+
+
+# FIXME testing
+class PlayerTest(QThread):
+    def __init__(self, parent, data):
+        super().__init__(parent)
+        self.data = data
+
+    def run(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(('localhost', 4420))
+
+            while True:
+                count = s.send(self.data)
+
+                if count != 4:
+                    log.warn("Incomplete send of controller input!", sent=count)
+                time.sleep(1)
+
+        except Exception:
+            log.error()
+
+
+
+
 
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
