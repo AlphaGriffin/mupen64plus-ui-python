@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: lannocc @ AlphaGriffin <Alphagriffin.com>
+# Author: lannocc and ruckusist @ AlphaGriffin <Alphagriffin.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,23 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from m64py.frontend.aicommon import AICommon
-from PyQt5.QtCore import pyqtSlot, QThread  # , QTimer
-from PyQt5.QtWidgets import QAbstractItemView
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import os, sys, socket, time  # , shutil
-# from glob import glob as check
-import numpy as np
-import tensorflow as tf
-from PIL import Image
-from PIL import ImageFile
-import traceback
+from PyQt5.QtCore import pyqtSlot, QThread
+import os, sys, socket, time
+from m64py.utils import version_split
 from m64py.core.defs import Buttons
-
-ImageFile.LOAD_TRUNCATED_IMAGES = True  # FIXME?
-
 import ag.logging as log
-import tensorflow as tf
-# import m64py.tf.model as Model
 
 VERSION = sys.version
 
@@ -50,24 +38,21 @@ INTRO = \
 class Player(AICommon):
     """AG_Player Widget of MuPen64 Python Ui"""
 
-    #
-    # STEP 0 - default setup
-    #
+    def __init__(self, parent, status, worker, backend):
 
-    def __init__(self, parent, worker, settings):
-        """ @param parent   QDialog (mainwindow)
-            @param worker   Mupen worker object
-            @param settings Settings dialog instance from mainwindow """
         # basic set-up
-        super().__init__(parent)
+        super().__init__(parent, status)
         self.setWorker(worker, 'model')
-        self.setWindowTitle('AG Player')
-        self.settings = settings
         self.print_console("AlphaGriffin.com - AI Player")
 
+        # backend and thread
+        self.backend = backend
+        self.backend.autoshots = os.path.join(self.root_dir, 'screenshot')
+        self.thread = PlayerThread(self, backend, worker)
+
         # AI machine player
-        self.ai_player = TensorPlay(os.path.join(self.root_dir, 'screenshot'))
-        self.ai_thread = PlayerThread(self, self.ai_player)
+        #self.ai_player = TensorPlay(os.path.join(self.root_dir, 'screenshot'))
+        #self.ai_thread = PlayerThread(self, self.ai_player)
         # AI will communicate with game through a WEBSERVER
 
         # model selector (don't populate it until window is actually shown)
@@ -86,79 +71,23 @@ class Player(AICommon):
         self.checkButton.setText('Thing 1')
         self.checkButton.setEnabled(False)
 
-        # check2 button starts server
-        self.check2Button.setText('Auto-Control Test')
-        self.check2Button.setEnabled(True)
+        # check2 button is not used
+        self.check2Button.hide()
 
         # status flags
         self.playing = False
         self.serving = False
         self.selected = None
         self.model_loaded = False
-        self.playing_game = False
         self.selection = []
         self.selectedRom = ""
         self.gamePath = ""
         self.selectingRom = True
-        self.sess = False
-        self.worker = worker
-        self.work_dir = self.worker.core.config.get_path("UserData")
-        self.root_dir = self.work_dir
-        self.work_dir = os.path.join(self.work_dir, "model")
 
         # all set!
         self.print_console(INTRO)
         self.getSaves()
 
-    # INPUT FUNCTIONS
-    def prepareInputPlugin(self, load):  # FIXME NOT DONE
-        """Pause ROM state, swap input plugin (load or unload), resume ROM"""
-        if load:
-            self.print_console("Switching to the mupen64plus-input-bot module")
-        else:
-            self.print_console("Switching back to user input module")
-
-        plugins = self.settings.qset.value("Path/Plugins", os.path.realpath(
-            os.path.dirname(self.worker.plugin_files[0])))
-        log.debug("prepareInputPlugin(): {}".format(plugins))
-
-        # see also settings.py set_plugins()
-
-        # all this really necessary?
-        # self.parent.worker.plugins_shutdown()
-        # self.parent.worker.plugins_unload()
-        ###self.parent.worker.plugins_load(path)
-        # self.parent.worker.plugins_startup()
-
-        log.warn("prepareInputPlugin(): NOT DONE")
-
-    def start_server(self):
-        return self.ai_thread.start_server()
-
-    def stop_server(self):
-        return self.ai_thread.stop_server()
-
-    def start_playing(self):
-        log.info("Waking up the AI to play...")
-
-        self.start_server()
-        folder = os.path.join(self.gamePath, self.select_string)
-        self.ai_thread.load_n_check(folder)
-
-        # FIXME: this is a hack to get us through the mario kart menus...
-        for i in range(100):
-            self.ai_thread.web_handler.output([0, 0, 1, 0, 0])
-
-        #self.ai_thread.start()
-
-        #self.playing_game = True
-
-    def stop_playing(self):
-        log.info("The AI is going to sleep...")
-
-        self.stop_server()
-
-        self.playing_game = False
 
     # SELECTOR FUNCTIONS
     def populateSelector(self):
@@ -284,35 +213,16 @@ class Player(AICommon):
     @pyqtSlot()
     def on_checkButton_clicked(self):
         """Test Button for pressing broken parts"""
-        log.debug("on_checkButton_clicked(): Check Test")
-        folder = os.path.join(self.gamePath, self.select_string)
-        self.ai_thread.load_n_check(folder)
-        log.debug("load_graph FINISHED!")
+        log.debug()
 
-        #log.debug("starting server")
-
-
-        """
-        if not self.model_loaded:
-            # self.load_model()
+        try:
+            self.status("Loading model...")  # FIXME: we don't actually see this
             folder = os.path.join(self.gamePath, self.select_string)
-
-            if self.ai_player.load_graph(folder):
-                self.checkButton.setText('Start Server')
-                self.actionButton.setEnabled(True)
-                self.model_loaded = True
-
-        else:
-            if self.serving:
-                self.stop_server()
-                self.checkButton.setText('Start Sever')
-                self.serving = False
-
-            else:
-                self.start_server()
-                self.checkButton.setText('Stop Server')
-                self.serving = True
-        """
+            self.backend.load_graph(folder)  
+            self.status("Model loaded.")
+            log.debug("load_graph FINISHED!")
+        except Exception:
+            log.error()
 
     @pyqtSlot()
     def on_check2Button_clicked(self):
@@ -335,335 +245,125 @@ class Player(AICommon):
 
     @pyqtSlot()
     def on_actionButton_clicked(self):
-        """Process the files"""
         try:
-            """
-            if  self.model_loaded is True:
-                test = self.tf_service()
-                if not test:
-                    self.print_console("Cannot Proceed, Check your files!")
-                    return False
-                self.print_console("Model Test Result: {}".format(test))
-                self.actionButton.setText('Start Game')
-            else:
-            """
+            if not self.thread.isRunning():
+                # make sure a ROM is loaded
+                self.worker.core_state_query(1)
+                loaded = self.worker.state in [2, 3]
+                if not loaded:
+                    self.print_console("Sorry, you must open a ROM first.")
+                    return
 
-            if not self.playing_game:
+                # check for required input plugin (FIXME: move this to AICommon?)
+                plugins = self.worker.get_plugins()
+                pinput = plugins.get(4)
+                if not pinput:
+                    pmap = list(self.worker.core.plugin_map[4].values())[0]
+                else:
+                    pmap = self.worker.core.plugin_map[4][pinput]
+                log.debug("detected input plugin", map=pmap)
+                pname = pmap[3]
+                rname = 'Mupen64Plus SDL Input Plugin - A.G.E.'
+                pver = pmap[4]
+                rver = int('0x030000', 16)
+                self.print_console("Input plugin detected: {} v{}".format(
+                        pname, version_split(pver)))
+                if not (pname == rname and pver >= rver):
+                    self.print_console("SORRY...input plugin mismatch")
+                    self.print_console("   required: {} >= v{}".format(
+                        rname, version_split(rver)))
+                    log.error("Wrong input plugin", name=pname,
+                            version=version_split(pver), required_name=rname,
+                            required_version=version_split(rver))
+                    return
+
                 self.print_console("Starting AI Player... Good Luck!")
-                self.start_playing()
-                self.actionButton.setText('Stop Game')
+                self.thread.folder = os.path.join(self.gamePath, self.select_string)
+                self.thread.start()
+
             else:
                 self.print_console("Stopping AI Player... Good Job!")
-                self.stop_playing()
-                self.actionButton.setText('Start Game')
-            #else:
-            #    self.print_console("You need to Test your Model")
-            #    self.actionButton.setText('Test Check')
-        except Exception as e:
-            log.fatal()
-            raise e
-
-    # ON WINDOW EVENTS
-    def hide(self):
-        """Hide this window"""
-
-        if self.playing:
-            self.ai_thread.playing = False  # this signals the thread to quit on its own, cleanly
-            self.print_console("Waiting for AI to settle down")
-            self.debug("waiting for ai_thread to finish...")
-            self.ai_thread.wait()
-            self.playing = False;
-            self.actionButton.setText("Play")
-
-        super().hide()
-
-    def show(self):
-        """Show this window"""
-        super().show()
-
-
-# FIXME testing
-class PlayerTest(QThread):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def run(self):
-        try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect(('localhost', 4420))
-            log.info("we are connected")
-
-            data = Buttons()
-            data.bits.START_BUTTON = 1
-            self.send(data)
-
-            time.sleep(1)
-            data.value = 0
-            self.send(data)
+                self.actionButton.setEnabled(False)
+                self.thread.done = True
 
         except Exception:
             log.error()
 
-    def send(self, data):
-        count = self.sock.send(data)
-        if count != 4:
-            log.warn("Incomplete send of controller input!", sent=count)
-
-
-
-
-
-
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
-#
-# CORE FUNCTIONALITY
-#
 
 
 class PlayerThread(QThread):
-    """Thread for the TensorPlay image classifier (which is the real brains)"""
 
-    def __init__(self, parent, thinker):
-        log.debug("PlayerThread init: {}".format(thinker))
-        super().__init__(parent)
-
-        self.parent = parent
-        self.thinker = thinker
-        self.model_path = None
-        self.web_handler = PlayerInputRequestHandler()
-        self.server_thread = ServerThread(parent=self.parent)
-        self.loaded_graph = False
-        self.playing = True
-
-    def load_n_check(self, model_path):
-        if self.thinker.load_graph(model_path):
-            self.loaded_graph = True
-            return True
-        else:
-            return False
-
+    def __init__(self, ui, backend, worker):
+        QThread.__init__(self, ui)
+        self.ui = ui
+        self.backend = backend
+        self.worker = worker
+        self.folder = None
+        self.done = False
 
     def run(self):
-        log.info("PlayerThread running");
-
-        # on your marks...
-        # self.model_path = self.parent.input.text()
-        # self.thinker.load_graph(self.model_path)
-
-        # get ready...
-        # self.parent.print_console("Starting local HTTP server for AI input pass-through")
-        # self.start_server()
-        # FIXME: remove any files from screenshot folder automatically before we start?
-        self.parent.print_console("Turning on core AI player mode")
-        self.parent.worker.ai_play()
-
-        # set...
-        self.parent.print_console("All set!")
-        self.parent.actionButton.setEnabled(True)
-
-        # go!
-        while self.playing:
-            image = self.thinker.dequeue_image()
-            if image is not None and image is not False:
-                try:
-                    moves = self.thinker.classify_image(image)
-                    self.web_handler.output(moves)
-                    self.parent.print_console(" -> {}".format(moves))
-                    log.debug("here again")
-                except Exception as e:
-                    log.fatal("Exception trying to play", e)
-
-            else:
-                time.sleep(.01)  # waiting 10 ms
-
-        # peace out
-        log.debug("player thread cleaning up...")
-        self.parent.worker.ai_stop()
-        self.stop_server()
-        self.thinker.forget()
-
-        log.info("PlayerThread done")
-
-    def start_server(self):
-        log.debug("start_server()")
-        server = HTTPServer(('', 8321), self.web_handler)
-
-        log.debug("starting server thread")
-        self.server_thread.set_server(server)
-        self.server_thread.start()
-
-        self.parent.print_console('Started httpserver on port 8321')
-
-    def stop_server(self):
-        log.debug("stop_server()")
-        self.server_thread.quit()
-        return True
-
-
-class TensorPlay(object):
-    """Actual connection to TensorFlow subsystem and image processing"""
-
-    def __init__(self, autoshots_path):
-        log.debug("TensorPlay init: {}".format(autoshots_path))
-
-        self.session = None
-        self.autoshots = autoshots_path
-
-    def load_graph(self, folder, game=None):
-        """Load the trained model from the given folder path"""
-        log.debug("load_graph(): folder = {}".format(folder))
-        try:
-            self.session = tf.InteractiveSession()
-            # new_path = "/Users/lannocc/.local/share/mupen64plus/model/outputmodel12/mupen64_mariokart64"
-            new_path = os.path.join(folder, "Mupen64plus")
-            meta_path = new_path + ".meta"
-            new_saver = tf.train.import_meta_graph(meta_path)
-            self.session.run(tf.global_variables_initializer())
-            new_saver.restore(self.session, new_path)
-        except Exception as e:
-            log.fatal(traceback.format_exc())
-
-        # FIXME: we have a situation here: there was no summary attached to this graph... gotta redo it.. :(
-        self.x = tf.get_collection_ref('x_image')[0]
-        self.k = tf.get_collection_ref('keep_prob')[0]
-        self.y = tf.get_collection_ref('y')[0]
-        debug = "input: {}\nkeep_prob: {}\nfinal layer: {}".format(self.x, self.k, self.y)
-        log.debug("input", x=self.x, k=self.k, y=self.y)
-        log.info("model successfully loaded")
-        return True
-
-    def dequeue_image(self, remove=False):
-        """Find next autoshot image, load and return it while removing it from disk"""
-
-        # FIXME: we have a contention problem reading an image file from disk so quickly
-        #       and adding sync() calls in mupen64plus-core causes some bad stuttering,
-        #       so we'll need to work out a better way to pass the images through
-        #   see HACK below
-
-        images = os.listdir(self.autoshots)
-        if not images:
-            return None
-
-        # HACK: wait for 2 images before we do anything (thanks to ruckusist for the idea)
-        if len(images) < 2:
-            return None
-
-        file = images[0]
-        log.debug("found file: {}".format(file))
-        #time.sleep(.005)  # 5 ms enough? FIXME
-
-        # load image into memory (performing minor processing) and remove from disk
-        img = self.prepare_image(os.path.join(self.autoshots, file))
-
-        if remove:
-            log.debug("removing image")
-            try:
-                os.remove(os.path.join(self.autoshots, file))
-            except Exception as e:
-                log.fatal("Exception removing image: {}".format(e))
-
-        return img
-
-    def prepare_image(self, img, makeBW=False):
-        """ This resizes the image to a tensorflowish size """
-        log.debug("prepare_image: {}".format(img))
-        try:
-            pil_image = Image.open(img)  # open img
-            log.debug("pil_image: {}".format(pil_image))
-            x = pil_image.resize((200, 66), Image.ANTIALIAS)  # resizes image
-        except Exception as e:
-            log.fatal("Exception: {}".format(e))
-            return False
-
-        # log.debug("   x: {}".format(x))
-        numpy_img = np.array(x)  # convert to numpy
-        # log.debug("   numpy_img: {}".format(numpy_img))
-        # if makeBW:
-        #    numpy_img = self.make_BW(numpy_img)           # grayscale
-        return numpy_img
-
-    def classify_image(self, vec):
-        """Return labels matching the supplied image. Image should already be prepared."""
-        log.debug("classify_image()")
-        #log.debug("vec", shape=vec.shape[:])
+        self.ui.actionButton.setText('Stop')
+        sock = None
 
         try:
-            feed_dict = {self.x: [vec], self.k: 1.0}
-            #log.debug("about to run session", feed_dict=feed_dict)
-            joystick = self.session.run(self.y, feed_dict)
-            log.debug("{}".format(joystick))
-            joystick = joystick[0] # because an array of array is originally returned
-            output = [
-                int(joystick[0] * 80),
-                int(joystick[1] * 80),
-                int(0), # START BUTTON
-                int(round(joystick[2])),
-                int(round(joystick[3])),
-                int(round(joystick[4])),
-            ]
+            self.worker.ai_play()
 
-            log.debug("   classification: {}".format(output))
-            return output
+            port = 4420
+            self.ui.status("Connecting to emulator port {}".format(port))
+            time.sleep(1)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(('localhost', port))
+            log.info("Connected to emulator", port=port)
+
+            self.ui.status("Loading Model...")
+            self.backend.load_graph(self.folder)
+
+            self.ui.status("Now playing...")
+            data = Buttons()
+
+            while not self.done:
+                image = self.backend.dequeue_image(True)
+                if image is not None and image is not False:
+                    moves = self.backend.classify_image(image)
+                    self.ui.status("AI decides {}".format(moves))
+                    #self.ui.print_console(moves)
+
+                    # due to possible weak training, some moves may not be valid
+                    # adjust them to fit before sending to the emulator
+                    if moves[0] < -80:      moves[0] = -80
+                    elif moves[0] > 80:     moves[0] = 80
+                    if moves[1] < -80:      moves[1] = -80
+                    elif moves[1] > 80:     moves[1] = 80
+                    for i in range(2, 5):
+                        if moves[i] > 1:    moves[i] = 1
+                        elif moves[i] < 0:  moves[i] = 0
+
+                    data.bits.X_AXIS = moves[0]
+                    data.bits.Y_AXIS = moves[1]
+                    data.bits.A_BUTTON = moves[2]
+                    data.bits.B_BUTTON = moves[3]
+                    data.bits.R_TRIG = moves[4]
+
+                    count = sock.send(data)
+                    if count != 4:
+                        log.warn("Incomplete send of controller input", sent=count)
+
+            self.ui.status("Done playing.")
+
         except Exception as e:
-            log.fatal("Exception evaluating model: {}".format(e))
-            pass
+            log.error()
+            self.ui.status("Error while playing: {}".format(e))
 
-    def forget(self):
-        """Wrap it up (close session, clean up)"""
-        log.debug("closing TensorFlow session...")
-        self.session.close()
-        log.info("TensorFlow session closed")
+        try:
+            if sock is not None:
+                sock.close()
+            self.worker.ai_stop()
+        except Exception:
+            log.error()
 
+        self.backend.forget()  # shutdown session, cleanup, etc.
+        self.done = False
 
-class ServerThread(QThread):
-    """Thread for running the web server"""
+        self.ui.actionButton.setText('Play')
+        self.ui.actionButton.setEnabled(True)
 
-    def set_server(self, server):
-        log.debug("set_server(): {}".format(server))
-        self.server = server
-
-    def quit(self):
-        self.running = False
-
-    def run(self):
-        log.debug("ServerThread run()")
-        #self.server.serve_forever()
-
-        self.running = True
-        while not self.running:
-            self.server.handle_request()
-
-
-class PlayerInputRequestHandler(BaseHTTPRequestHandler):
-    """Request handler for httpserver that sends controller commands upon request from the input plugin"""
-
-    def __init__(self):
-        self.response_message = [0, 0, 0, 0, 0]
-
-    def output(self, data):
-        log.debug("   set response_message <- {}".format(data))
-        self.response_message = data
-
-    def log_message(self, format, *args):
-        pass
-
-    def do_GET(self):
-        ### calibration
-        #        output = [
-        #            int(self.response_message[0] * 80),
-        #            int(self.response_message[1] * 80),
-        #            int(round(self.response_message[2])),
-        #            int(round(self.response_message[3])),
-        #            int(round(self.response_message[4])),
-        #        ]
-
-        log.debug("    <<< GET >>> :AI: {}".format(str(output)))
-
-        ### respond with action
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.end_headers()
-        self.wfile.write(self.response_message)  # this is the output to http here
-
-        return True

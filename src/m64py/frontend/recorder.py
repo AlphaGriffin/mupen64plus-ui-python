@@ -56,8 +56,7 @@ class Recorder(AICommon):
         self.actionButton.setEnabled(False)
         self.checkButton.setEnabled(True)
         self.checkButton.setText('Check')
-        self.check2Button.setEnabled(False)
-        self.check2Button.setText('unused')
+        self.check2Button.hide()
         self.input.setEnabled(False)
         self.selector.setEnabled(False)
 
@@ -128,6 +127,7 @@ class Recorder(AICommon):
 
         ready = False
         if loaded:
+            # check for required input plugin (FIXME: move to AICommon?)
             plugins = self.worker.get_plugins()
             pinput = plugins.get(4)
             if not pinput:

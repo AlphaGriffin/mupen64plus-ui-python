@@ -127,13 +127,12 @@ class AIDashboard(QDialog, Ui_AIDashboard):
 
     backendReady = pyqtSignal(Deferred, bool)
 
-    def __init__(self, parent, worker, settings):
+    def __init__(self, parent, worker):
         """Initialize the dashboard.
 
         Args:
             parent (QDialog):       The window we belong to (usually mainwindow)
             worker (Worker):        Frontend worker thread which manages ROM state
-            settings (Settings):    Instance of Settings dialog from mainwindow
         """
 
         log.info("Initializing Alpha Griffin Artificial Intelligence Dashboard")
@@ -142,7 +141,6 @@ class AIDashboard(QDialog, Ui_AIDashboard):
 
         self.parent = parent
         self.worker = worker
-        self.settings = settings
 
         if log.level >= log.DEBUG:
             self.tabster.setTabsClosable(True)
@@ -310,11 +308,13 @@ class Player(Deferred):
         Deferred.__init__(self, dashboard, "Play")
 
     def loadBackend(self, force):
-        return None
+        import m64py.ai.player as backend
+        if force: reload(backend)
+        return backend.Player()
 
     def loadFrontend(self, force):
         import m64py.frontend.player as frontend
         if force: reload(frontend)
         dash = self.dashboard
-        return frontend.Player(dash, dash.worker, dash.settings)
+        return frontend.Player(dash, dash.status, dash.worker, self.backend)
 

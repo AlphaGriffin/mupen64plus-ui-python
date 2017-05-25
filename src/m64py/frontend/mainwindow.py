@@ -87,8 +87,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.worker.init():
             raise Exception("Core/worker init failure. See other messages for details.")
         
-        # Alpha Griffin Edition additions...
-        self.ai = AIDashboard(self, self.worker, self.settings)
+        # Alpha Griffin AI Dashboard
+        self.ai = AIDashboard(self, self.worker)
 
     def closeEvent(self, event):
         self.worker.quit()
