@@ -18,6 +18,7 @@ import os
 import sys
 import numpy as np
 from PIL import Image
+from m64py.core.defs import Buttons
 import ag.logging as log
 
 
@@ -109,22 +110,42 @@ class Processing():
         return numpy_img
 
     def gamepadImageMatcher(self, path):
-        """Matche gamepad csv data rows to images based on timestamps.
+        """Match gamepad data rows to images based on timestamps.
 
         Params: A path with timestamped pictures and a
                 timestamped .csv of varying lenghs.
         Returns: two arrays of matched length img, labels.
         """
 
-        # Open CSV for reading
+        # Open input data for reading
+        #   FIXME: support more than player 0
         csv_path = os.path.join(path, "controller0.dat")
         csv_io = open(csv_path, 'r')
 
         # Convert to a true array
         csv = []
         for line in csv_io:
-            # Split the string into array and trim off any whitespace/newlines
-            csv.append([item.strip() for item in line.split(',')])
+            # Convert the compact controller data to an array of the inputs we
+            # are interested in
+            rawdata = [item.strip() for item in line.split(',')]
+
+            if len(rawdata) == 2:
+                data = []
+                data.append(rawdata[0])  # timestamp
+
+                buttons = Buttons()
+                buttons.value = int(rawdata[1], 16)  # hex data
+
+                data.append(buttons.bits.X_AXIS)
+                data.append(buttons.bits.Y_AXIS)
+                data.append(buttons.bits.A_BUTTON)
+                data.append(buttons.bits.B_BUTTON)
+                data.append(buttons.bits.R_TRIG)
+
+                csv.append(data)
+            else:
+                log.error("Bad data in controller input log", line=csv_io)
+
         if not csv:
             # print ("CSV HAS NO DATA")
             return None, None
