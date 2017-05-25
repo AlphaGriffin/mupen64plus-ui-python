@@ -110,13 +110,6 @@ class Player(AICommon):
         self.print_console(INTRO)
         self.getSaves()
 
-        # FIXME testing
-        data = Buttons()
-        data.bits.START_BUTTON = 1
-        print(data.value)
-        print(hex(data.value))
-        self.data = data
-
     # INPUT FUNCTIONS
     def prepareInputPlugin(self, load):  # FIXME NOT DONE
         """Pause ROM state, swap input plugin (load or unload), resume ROM"""
@@ -334,7 +327,7 @@ class Player(AICommon):
         try:
             self.worker.ai_play()
 
-            thread = PlayerTest(self, self.data)
+            thread = PlayerTest(self)
             thread.start()
 
         except Exception:
@@ -391,24 +384,31 @@ class Player(AICommon):
 
 # FIXME testing
 class PlayerTest(QThread):
-    def __init__(self, parent, data):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.data = data
 
     def run(self):
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(('localhost', 4420))
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect(('localhost', 4420))
+            log.info("we are connected")
 
-            while True:
-                count = s.send(self.data)
+            data = Buttons()
+            data.bits.START_BUTTON = 1
+            self.send(data)
 
-                if count != 4:
-                    log.warn("Incomplete send of controller input!", sent=count)
-                time.sleep(1)
+            time.sleep(1)
+            data.value = 0
+            self.send(data)
 
         except Exception:
             log.error()
+
+    def send(self, data):
+        count = self.sock.send(data)
+        if count != 4:
+            log.warn("Incomplete send of controller input!", sent=count)
+
 
 
 
