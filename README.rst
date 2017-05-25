@@ -1,7 +1,3 @@
-=====
-m64py
-=====
-
 ::
 
                   _____ __ __
@@ -26,20 +22,14 @@ m64py
 
 
 About
------
+=====
 
 M64Py is a Qt5 front-end (GUI) for Mupen64Plus, a cross-platform
 plugin-based Nintendo 64 emulator. Front-end is written in Python and it
-provides a user-friendly interface over Mupen64Plus shared library.
-
-**Alpha Griffin Edition**
-
-The Alpha Griffin Edition showcases new advancements in machine learning
-with TensorFlow, allowing the emulator to learn by watching the player's
-games.
+provides a user-friendly interface over the Mupen64Plus shared library.
 
 Features
---------
+========
 
 * Changeable emulation plugins for audio, core, input, rsp, video
 * Selection of emulation core
@@ -57,10 +47,31 @@ Features
 * Game player for playing trained models in new levels
 
 Dependencies
-------------
+============
 
-* [PyQt5](https://www.riverbankcomputing.com/software/pyqt/download5) (QtCore, QtGui, QtWidgets, QtOpenGL)
-* [PySDL2](https://pysdl2.readthedocs.io)
+* `PyQt5 <https://www.riverbankcomputing.com/software/pyqt/download5>`_ (QtCore, QtGui, QtWidgets, QtOpenGL)
+* `PySDL2 <https://pysdl2.readthedocs.io>`_
+
+Ubuntu
+++++++
+
+``sudo apt-get install python-pyqt5 pyqt5-dev-tools python-pyqt5.qtopengl
+libsdl2-dev``
+
+PyPi
+++++
+
+To install just the Python dependencies:
+
+``pip install -r requirements.txt --user``
+
+.. note::
+
+  This will not install the other system dependencies which are listed above.
+
+  You can also drop the ``--user`` flag and run as root user if you want to
+  install system-wide, but this is not recommended, as this will likely
+  screw up your distro's package management.
 
 **Alpha Griffin Edition**
 
@@ -75,15 +86,23 @@ Additional dependencies are required for the Alpha Griffin Edition machine learn
 * [aglog](http://github.com/AlphaGriffin/logpy)
 
 Install
--------
+=======
 
-Run *python setup.py install* to install
+First, run ``python setup.py build`` followed by  ``python setup.py install``
+to install
 
-Run *python setup.py build_qt* before you can start ./m64py from source dir
+.. code::
+
+  python setup.py build
+  python setup.py install --user
+
+.. note::
+
+  If you use the ``--user`` flag, make sure ``~/.local/bin`` is in your
+  user's path environment variable.
 
 License
--------
+=======
 
-M64Py is free/libre software released under the terms of the GNU GPL license,
-see the `COPYING' file for details.
-
+M64Py is free/libre software released under the terms of the GNU GPL license.
+Please see the ``COPYING`` file for details.

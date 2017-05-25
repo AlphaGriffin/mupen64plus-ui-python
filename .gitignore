@@ -1,12 +1,15 @@
+# Directories
+build/
+src/m64py.egg-info/
+
+# Files
+dist/*.egg
 *.pyc
 *.swp
-/src/m64py/ui/*.py
-/mupen64plus_visualstudios_solution
-/build
-.idea
-/dist/*
-m64py.py
+src/m64py/ui/*_rc.py
+src/m64py/ui/*_ui.py
 
+# FIXME... still working it out...
 /doc/doctrees
 /doc/man
 /doc/html
