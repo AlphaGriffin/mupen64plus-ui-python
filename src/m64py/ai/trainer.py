@@ -100,8 +100,8 @@ class Trainer():
             sess.run(train, feed_dict=feed_dict)
             g = sess.run(global_step)
             self.print("THIS IS WORKING!!! {}".format(g))
-            if i % int(iters/10):
+            if i % int(iters/10) == 0:
+                self.print("this is SAVING!!!")
                 new_saver.save(sess, model_path + '/Mupen64plus', global_step)
-            self.print("this is SAVING!!!")
         sess.close()
 
